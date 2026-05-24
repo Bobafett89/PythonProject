@@ -1,4 +1,5 @@
 import pygame
+from pygame import Vector2
 import os
 
 class GAME:
@@ -38,8 +39,8 @@ class GAME:
             GAME.level.GROUND = Tilemap()
 
         @staticmethod
-        def player(sprite_path: str, tile_pos: tuple[int, int], speed: float) -> None:
-            pos = (pygame.Vector2(tile_pos) + (0.5, 0.5)) * GAME.level.TILE_SIZE
+        def player(sprite_path: str, tile_pos: tuple[float, float], speed: float) -> None:
+            pos = (Vector2(tile_pos) + Vector2(0.5, 0.5)) * GAME.level.TILE_SIZE
             GAME.level.PLAYER = Character(sprite_path, pos, speed)
             GAME.add.sprite(GAME.level.PLAYER)
 
@@ -53,7 +54,7 @@ class GAME:
             GAME.SPRITES.add(sprite)
 
 class Basic_object(pygame.sprite.Sprite):
-    def __init__(self, sprite_path: str, pos: pygame.Vector2) -> None:
+    def __init__(self, sprite_path: str, pos: Vector2) -> None:
         super().__init__()
         img = pygame.image.load(os.path.join(sprite_path))
         self.image = pygame.transform.scale(img, (GAME.level.TILE_SIZE, GAME.level.TILE_SIZE))
@@ -61,88 +62,115 @@ class Basic_object(pygame.sprite.Sprite):
         self.rect = self.rect.move_to(center=pos)
     
 class Dynamic_object(Basic_object):
-    def __init__(self, sprite_path: str, pos: pygame.Vector2) -> None:
+    def __init__(self, sprite_path: str, pos: Vector2) -> None:
         super().__init__(sprite_path, pos)
-        self.pos = pygame.Vector2(pos)
+        self.pos = Vector2(pos)
 
-    def move(self, offset: pygame.Vector2) -> None:
-        self.pos.update(self.pos + offset)
+    def move(self, offset: Vector2) -> None:
+        self.pos += offset
         self.rect = self.rect.move_to(center=self.pos)
 
     def behaviour(self) -> None:
         pass
 
 class Character(Dynamic_object):
-    SIZE_Y = 1
-    SIZE_X = 0.5
-    SIZE_FACTOR = 0.8
-    GROUND_MARGIN = 0.05
+    SIZE = Vector2(0.5, 1) * 0.8
 
-    def __init__(self, sprite_path: str, pos: pygame.Vector2, speed: float) -> None:
+    class physics:
+        def __init__(self, character: Character) -> None:
+            self.COLLIDER_MARGIN = 0.05
+            self.VELOCITY = Vector2(0, 0)
+            self.GRAVITY = 10
+            self.JUMP = 5
+            self.on_ground = False
+            self.character = character
+
+        def collide(self) -> None:
+            def get_map() -> list[list[bool, bool, bool], list[bool, bool, bool], list[bool, bool, bool]]:
+                tile_pos = Vector2(self.character.pos.x, self.character.pos.y) // GAME.level.TILE_SIZE
+                grid = [[True, True, True], [True, True, True], [True, True, True]]
+                for i in range(3):
+                    if((tile_pos.x != 0 or i != 0) and (tile_pos.x != len(GAME.level.GROUND.MAP) - 1 or i != 2)):
+                        for j in range(3):
+                            if((tile_pos.y != 0 or j != 0) and (tile_pos.y != len(GAME.level.GROUND.MAP[0]) - 1 or j != 2)):
+                                grid[i][j] = GAME.level.GROUND.MAP[int(tile_pos.x) - 1 + i][int(tile_pos.y) - 1 + j]
+                return grid
+            
+            def get_local_pos() -> Vector2:
+                pos_in_tile = Vector2(self.character.pos.x, self.character.pos.y) / GAME.level.TILE_SIZE
+                pos_in_tile -= pos_in_tile // 1
+                return pos_in_tile
+
+            def get_border_offset() -> tuple[Vector2, Vector2]:
+                border_offset = Character.SIZE / 2
+                return border_offset
+
+            def get_border() -> tuple[Vector2, Vector2]:
+                pos_in_tile, border_offset = get_local_pos(), get_border_offset()
+                top_left = pos_in_tile - border_offset
+                bottom_right = pos_in_tile + border_offset
+                return (top_left, bottom_right)
+
+            pos_in_tile, border_offset = get_local_pos(), get_border_offset()
+            top_left, bottom_right = get_border()
+            map = get_map()
+
+            if(self.VELOCITY.y != 0):
+                self.on_ground = False
+                moving_down = self.VELOCITY.y > 0
+                dir = 2 * moving_down - 1
+                collider_edge = pos_in_tile.y + (border_offset.y + self.COLLIDER_MARGIN) * dir
+                border = 1 * moving_down
+                is_not_touching = (collider_edge * dir) < border
+                if(not is_not_touching):
+                    left = top_left.x > 0 or not map[0][2 * moving_down]
+                    middle = not map[1][2 * moving_down]
+                    right = bottom_right.x < 1 or not map[2][2 * moving_down]
+                    can_move = left and middle and right
+                    if(not can_move):
+                        if(moving_down):
+                            self.on_ground = True
+                        self.VELOCITY.y = 0
+
+            if(self.VELOCITY.x != 0):
+                moving_right = self.VELOCITY.x > 0
+                dir = (2 * moving_right - 1)
+                collider_edge = pos_in_tile.x + (border_offset.x + self.COLLIDER_MARGIN) * dir
+                border = 1 * moving_right
+                is_not_touching = (collider_edge * dir) < border
+                if(not is_not_touching):
+                    top = top_left.y > 0 or not map[2 * moving_right][0]
+                    middle = not map[2 * moving_right][1]
+                    bot = bottom_right.y < 1 or not map[2 * moving_right][2]
+                    can_move = top and middle and bot
+                    if(not can_move):
+                        self.VELOCITY.x = 0
+
+    def __init__(self, sprite_path: str, pos: Vector2, speed: float) -> None:
         super().__init__(sprite_path, pos)
-        self.speed = speed * GAME.level.TILE_SIZE
-        char_unit = GAME.level.TILE_SIZE * Character.SIZE_FACTOR
-        self.image = pygame.transform.scale(self.image, (char_unit * Character.SIZE_X, char_unit * Character.SIZE_Y))
+        self.image = pygame.transform.scale(self.image, Character.SIZE * GAME.level.TILE_SIZE)
         self.rect = self.image.get_rect()
         self.rect = self.rect.move_to(center=pos)
+
+        self.PHYSICS = Character.physics(self)
+        self.speed = speed * GAME.level.TILE_SIZE
     
     def behaviour(self) -> None:
         keys = pygame.key.get_pressed()
         speed = self.speed * GAME.frame.delta_time
-        dirs = self.can_go()
+        gravity = self.PHYSICS.GRAVITY * GAME.frame.delta_time
 
-        if(keys[pygame.K_d] and dirs[1]):
-            self.move(pygame.Vector2(speed, 0))
-        if(keys[pygame.K_a] and dirs[0]):
-            self.move(pygame.Vector2(-speed, 0))
-        if(keys[pygame.K_w] and dirs[2]):
-            self.move(pygame.Vector2(0, -speed))
-        if(keys[pygame.K_s] and dirs[3]):
-            self.move(pygame.Vector2(0, speed))
+        self.PHYSICS.VELOCITY.x = speed * keys[pygame.K_d] - speed * keys[pygame.K_a]
+        if(keys[pygame.K_w] and self.PHYSICS.on_ground):
+            self.PHYSICS.VELOCITY.y = -self.PHYSICS.JUMP
+            self.PHYSICS.on_ground = False
+        elif(keys[pygame.K_UP]):
+            self.PHYSICS.VELOCITY.y = -self.PHYSICS.JUMP
+        else:
+            self.PHYSICS.VELOCITY.y += gravity
 
-    def can_go(self) -> list[bool, bool, bool, bool]:
-        def get_grid() -> list[list[bool, bool, bool], list[bool, bool, bool], list[bool, bool, bool]]:
-            tile_pos = pygame.Vector2(self.pos.x, self.pos.y) // GAME.level.TILE_SIZE
-            grid = [[True, True, True], [True, True, True], [True, True, True]]
-            for i in range(3):
-                if((tile_pos.x != 0 or i != 0) and (tile_pos.x != len(GAME.level.GROUND.MAP) - 1 or i != 2)):
-                    for j in range(3):
-                        if((tile_pos.y != 0 or j != 0) and (tile_pos.y != len(GAME.level.GROUND.MAP[0]) - 1 or j != 2)):
-                            grid[i][j] = GAME.level.GROUND.MAP[int(tile_pos.x) - 1 + i][int(tile_pos.y) - 1 + j]
-            return grid
-        
-        def get_border() -> tuple[pygame.Vector2, pygame.Vector2]:
-            pos_in_tile = pygame.Vector2(self.pos.x, self.pos.y) / GAME.level.TILE_SIZE
-            pos_in_tile -= pos_in_tile // 1
-            border_offset = pygame.Vector2(Character.SIZE_X, Character.SIZE_Y) * Character.SIZE_FACTOR / 2
-            top_left = pos_in_tile - pygame.Vector2(border_offset.x, border_offset.y)
-            bottom_right = pos_in_tile + pygame.Vector2(border_offset.x, border_offset.y)
-            return (top_left, bottom_right)
-
-        dirs = [False, False, False, False]
-        top_left, bottom_right = get_border()
-        map = get_grid()
-        for i in range(2):
-            isNotTouching = top_left.x > Character.GROUND_MARGIN if i==0 else bottom_right.x < 1 - Character.GROUND_MARGIN
-            if(isNotTouching):
-                dirs[i] = True
-            else:
-                top = top_left.y > 0 or not map[2 * i][0]
-                middle = not map[2 * i][1]
-                bot = bottom_right.y < 1 or not map[2 * i][2]
-                dirs[i] = top and middle and bot
-
-        for i in range(2):
-            isNotTouching = top_left.y > Character.GROUND_MARGIN if i==0 else bottom_right.y < 1 - Character.GROUND_MARGIN
-            if(isNotTouching):
-                dirs[2+i] = True
-            else:
-                top = top_left.x > 0 or not map[0][2 * i]
-                middle = not map[1][2 * i]
-                bot = bottom_right.x < 1 or not map[2][2 * i]
-                dirs[2+i] = top and middle and bot
-
-        return dirs
+        self.PHYSICS.collide()
+        self.move(self.PHYSICS.VELOCITY)
 
 class Tilemap:
     def __init__(self) -> None:
@@ -154,7 +182,7 @@ class Tilemap:
                 self.MAP[i].append(False)
     
     def addTile(self, spritePath: str, tile_pos: tuple[int, int]) -> None:
-        pos = (pygame.Vector2(tile_pos) + (0.5, 0.5)) * GAME.level.TILE_SIZE
+        pos = (Vector2(tile_pos) + Vector2(0.5, 0.5)) * GAME.level.TILE_SIZE
         tile = Basic_object(spritePath, pos)
         self.SPRITES.add(tile)
         self.MAP[tile_pos[0]][tile_pos[1]] = True

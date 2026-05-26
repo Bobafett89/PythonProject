@@ -3,7 +3,7 @@ from Classes import GAME
 
 pygame.init()
 GAME.init.level(1)
-GAME.init.player("Assets/Char.png", (3, 6), 5)
+GAME.init.player("Assets/Char.png", pygame.Vector2(3.5, 6.5), 5)
 
 for i in range(6):
     GAME.add.ground_tile("Assets/Block.png", (i, 8))

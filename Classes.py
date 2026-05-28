@@ -6,11 +6,14 @@ import os
 class GAME:
     SCREEN = pygame.display.set_mode()
     CLOCK = pygame.time.Clock()
-    SPRITES = pygame.sprite.Group()
+    RENDER_GROUPS = []
     is_running = True
 
     class level:
+        SPRITES = None
+        GENERATOR = None
         GROUND = None
+        HAZARD = None
         PLAYER = None
         SIZE = None
         TILE_SIZE = None
@@ -18,6 +21,31 @@ class GAME:
         @staticmethod
         def logic() -> None:
             GAME.level.PLAYER.behaviour()
+            GAME.level.death()
+
+        @staticmethod
+        def death() -> None:
+            hazard_contacts = pygame.sprite.spritecollide(GAME.level.PLAYER, GAME.level.HAZARD.SPRITES, False)
+            if(len(hazard_contacts) > 0):
+                GAME.level.reset()
+
+        @staticmethod
+        def close():
+            GAME.RENDER_GROUPS = []
+            GAME.level.SPRITES = None
+            GAME.level.GENERATOR = None
+            GAME.level.GROUND = None
+            GAME.level.HAZARD = None
+            GAME.level.PLAYER = None
+            GAME.level.SIZE = None
+            GAME.level.TILE_SIZE = None
+
+        @staticmethod
+        def reset() -> None:
+            size = GAME.level.SIZE
+            generator = GAME.level.GENERATOR
+            GAME.level.close()
+            GAME.init.level(size, generator)
 
     class frame:
         delta_time = 0
@@ -28,30 +56,40 @@ class GAME:
         @staticmethod
         def render() -> None:
             GAME.SCREEN.fill("black")
-            GAME.level.GROUND.render(GAME.SCREEN)
-            GAME.SPRITES.draw(GAME.SCREEN)
+            for i in range(len(GAME.RENDER_GROUPS)):
+                GAME.RENDER_GROUPS[i].draw(GAME.SCREEN)
             pygame.display.flip()
 
     class init:
         @staticmethod
-        def level(size_factor: int) -> None:
+        def level(size_factor: int, generator: function) -> None:
+            GAME.level.SPRITES = pygame.sprite.Group()
             GAME.level.SIZE = size_factor
             GAME.level.TILE_SIZE = GAME.SCREEN.get_width() / (16 * size_factor)
             GAME.level.GROUND = Tilemap()
+            GAME.level.HAZARD = Tilemap()
+            GAME.level.GENERATOR = generator
+            generator()
+            GAME.RENDER_GROUPS.append(GAME.level.SPRITES)
+            GAME.RENDER_GROUPS.append(GAME.level.GROUND.SPRITES)
+            GAME.RENDER_GROUPS.append(GAME.level.HAZARD.SPRITES)
 
         @staticmethod
         def player(sprite_path: str, pos: Vector2[float, float], speed: float) -> None:
             GAME.level.PLAYER = Character(sprite_path, pos, speed)
-            GAME.add.sprite(GAME.level.PLAYER)
+            GAME.add.level_sprite(GAME.level.PLAYER)
 
     class add:
         @staticmethod
         def ground_tile(sprite_path: str, tile_pos: tuple[int, int]) -> None:
             GAME.level.GROUND.addTile(sprite_path, tile_pos)
 
+        def hazard_tile(sprite_path: str, tile_pos: tuple[int, int]) -> None:
+            GAME.level.HAZARD.addTile(sprite_path, tile_pos)
+
         @staticmethod
-        def sprite(sprite):
-            GAME.SPRITES.add(sprite)
+        def level_sprite(sprite):
+            GAME.level.SPRITES.add(sprite)
 
 class Basic_object(pygame.sprite.Sprite):
     def __init__(self, sprite_path: str, pos: Vector2[float, float]) -> None:
@@ -264,6 +302,3 @@ class Tilemap:
         tile = Basic_object(spritePath, pos)
         self.SPRITES.add(tile)
         self.MAP[tile_pos[0]][tile_pos[1]] = True
-
-    def render(self, surface: pygame.Surface) -> None:
-        self.SPRITES.draw(surface)

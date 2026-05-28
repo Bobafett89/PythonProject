@@ -93,12 +93,14 @@ class Character(Dynamic_object):
             count: int = 0
             def_count: int = 0
 
-        def __init__(self, character: Character) -> None:
+        def __init__(self, character: Character, speed: float) -> None:
             self.COLLIDER_MARGIN = 0.05
             self.VELOCITY = Vector2(0, 0)
             self.GRAVITY = 10
             self.JUMP = Character.physics_controller.jump_struct()
             self.DASH = Character.physics_controller.dash_struct()
+            self.speed = speed
+            self.dir = 1
             self.character = character
 
         def collide(self) -> None:
@@ -173,19 +175,47 @@ class Character(Dynamic_object):
                 self.VELOCITY.y = 0
                 self.JUMP.on_ground = False
 
+        def phys_run(self, dir) -> None:
+            if(not self.DASH.is_active):
+                self.VELOCITY.x = self.speed * dir
+
+        def phys_dash(self) -> None:
+            dash = self.DASH
+            pos = self.character.pos
+            if(not dash.is_active and dash.count > 0):
+                dash.is_active = True
+                dash.destination = pos.x + dash.distance * self.dir
+                dash.count -= 1
+            if(dash.is_active):
+                left = (dash.destination - pos.x) * self.dir
+                step = dash.speed * GAME.frame.delta_time
+                if(left > 0):
+                    if(step <= left):
+                        self.VELOCITY.x = dash.speed * self.dir
+                    else:
+                        self.VELOCITY.x = left * self.dir / GAME.frame.delta_time
+                else:
+                    dash.is_active = False
+                    dash.destination = None
+
+        def phys_jump(self) -> None:
+            if(not self.DASH.is_active):
+                if(self.JUMP.on_ground or self.JUMP.add_jumps > 0):
+                    self.VELOCITY.y = -self.JUMP.force
+                    if(not self.JUMP.on_ground):
+                        self.JUMP.add_jumps -= 1
+
         def phys_move(self) -> None:
             if(self.VELOCITY.x > 0):
-                self.character.dir = 1
+                self.dir = 1
             elif(self.VELOCITY.x < 0):
-                self.character.dir = -1
+                self.dir = -1
             offset = self.VELOCITY * GAME.frame.delta_time
             self.character.move(offset)
 
     def __init__(self, sprite_path: str, pos: Vector2, speed: float) -> None:
         super().__init__(sprite_path, pos)
-        self.PHYSICS = Character.physics_controller(self)
-        self.speed = speed
-        self.dir = 1
+        self.PHYSICS = Character.physics_controller(self, speed)
 
         TILE_SIZE = GAME.level.TILE_SIZE
         self.image = pygame.transform.scale(self.image, Character.SIZE * TILE_SIZE)
@@ -193,47 +223,22 @@ class Character(Dynamic_object):
         self.rect = self.rect.move_to(center=(pos * TILE_SIZE))
     
     def behaviour(self) -> None:
-        self.dash()
+        keys, new_keys = pygame.key.get_pressed(), pygame.key.get_just_pressed()
+
+        if(new_keys[pygame.K_LSHIFT] or self.PHYSICS.DASH.is_active):
+            self.PHYSICS.phys_dash()
+
         self.PHYSICS.apply_grav()
-        self.run()
-        self.jump()
+
+        dir = 1 * keys[pygame.K_d] - 1 * keys[pygame.K_a]
+        self.PHYSICS.phys_run(dir)
+
+        if(keys[pygame.K_w] and self.PHYSICS.JUMP.on_ground or new_keys[pygame.K_w]):
+            self.PHYSICS.phys_jump()
 
         self.debug()
         self.PHYSICS.collide()
         self.PHYSICS.phys_move()
-
-    def dash(self):
-        keys, new_keys = pygame.key.get_pressed(), pygame.key.get_just_pressed()
-        dash = self.PHYSICS.DASH
-        if(new_keys[pygame.K_LSHIFT] and not dash.is_active and dash.count > 0):
-            dash.is_active = True
-            dash.destination = self.pos.x + dash.distance * self.dir
-            dash.count -= 1
-        if(dash.is_active):
-            print(self.dir)
-            left = (dash.destination - self.pos.x) * self.dir
-            step = dash.speed * GAME.frame.delta_time
-            if(left > 0):
-                if(step <= left):
-                    self.PHYSICS.VELOCITY.x = dash.speed * self.dir
-                else:
-                    self.PHYSICS.VELOCITY.x = left * self.dir / GAME.frame.delta_time
-            else:
-                dash.is_active = False
-                dash.destination = None
-
-    def run(self):
-        if(not self.PHYSICS.DASH.is_active):
-            keys, new_keys = pygame.key.get_pressed(), pygame.key.get_just_pressed()
-            self.PHYSICS.VELOCITY.x = self.speed * keys[pygame.K_d] - self.speed * keys[pygame.K_a]
-
-    def jump(self):
-        if(not self.PHYSICS.DASH.is_active):
-            keys, new_keys = pygame.key.get_pressed(), pygame.key.get_just_pressed()
-            if(keys[pygame.K_w] and self.PHYSICS.JUMP.on_ground or new_keys[pygame.K_w] and self.PHYSICS.JUMP.add_jumps > 0):
-                self.PHYSICS.VELOCITY.y = -self.PHYSICS.JUMP.force
-                if(not self.PHYSICS.JUMP.on_ground):
-                    self.PHYSICS.JUMP.add_jumps -= 1
 
     def debug(self) -> None:
         keys = pygame.key.get_pressed()

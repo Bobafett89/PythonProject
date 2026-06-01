@@ -1,5 +1,5 @@
 import pygame
-from Classes import GAME
+from Game import GAME
 
 def test_level():
     GAME.init.player("Assets/Char.png", pygame.Vector2(3.5, 6.5), 5)

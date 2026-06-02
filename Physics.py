@@ -2,18 +2,41 @@ import pygame
 from pygame import Vector2
 from Structs import jump_struct, dash_struct
 from BasicObjects import Dynamic_object
-from Game import GAME
 
 class character_physics_controller:
         def __init__(self, entity: type[Dynamic_object], speed: float) -> None:
-            self.COLLIDER_MARGIN = 0.05
-            self.VELOCITY = Vector2(0, 0)
-            self.GRAVITY = 10
-            self.JUMP = jump_struct()
-            self.DASH = dash_struct()
+            self.__COLLIDER_MARGIN = 0.05
+            self.__VELOCITY = Vector2(0, 0)
+            self.__GRAVITY = 10
+            self.__JUMP = jump_struct()
+            self.__DASH = dash_struct()
             self.speed = speed
-            self.dir = 1
-            self.entity = entity
+            self.__dir = 1
+            self.__entity = entity
+
+        @property
+        def VELOCITY(self):
+            return self.__VELOCITY
+        
+        @property
+        def JUMP(self):
+            return self.__JUMP
+        
+        @property
+        def DASH(self):
+            return self.__DASH
+        
+        @property
+        def GRAVITY(self):
+            return self.__GRAVITY
+        
+        @property
+        def COLLIDER_MARGIN(self):
+            return self.__COLLIDER_MARGIN
+        
+        @property
+        def dir(self):
+            return self.__dir
 
         def collide(self) -> None: #stops object from moving if touches ground
             def grounded() -> None: #events which are fired when object touches ground
@@ -27,9 +50,9 @@ class character_physics_controller:
                 self.DASH.is_active = False
                 self.DASH.destination = None
 
-            pos_in_tile, border_offset = self.entity.get_local_pos(), self.entity.get_border_offset()
-            top_left, bottom_right = self.entity.get_border()
-            map = self.entity.get_local_map()
+            pos_in_tile, border_offset = self.__entity.get_local_pos(), self.__entity.get_border_offset()
+            top_left, bottom_right = self.__entity.get_border()
+            map = self.__entity.get_local_map()
 
             if(self.VELOCITY.y != 0):
                 self.JUMP.on_ground = False
@@ -65,7 +88,7 @@ class character_physics_controller:
 
         def apply_grav(self) -> None: #applies gravity to velocity
             if(not self.DASH.is_active):
-                self.VELOCITY.y += self.GRAVITY * GAME.frame.delta_time
+                self.VELOCITY.y += self.GRAVITY * self.__entity.GAME.FRAME.delta_time
             else:
                 self.VELOCITY.y = 0
                 self.JUMP.on_ground = False
@@ -76,19 +99,19 @@ class character_physics_controller:
 
         def dash(self) -> None: #applies special force to the velocity if has enough dashes
             dash = self.DASH
-            pos = self.entity.pos
+            pos = self.__entity.pos
             if(not dash.is_active and dash.count > 0):
                 dash.is_active = True
                 dash.destination = pos.x + dash.distance * self.dir
                 dash.count -= 1
             if(dash.is_active):
                 left = (dash.destination - pos.x) * self.dir
-                step = dash.speed * GAME.frame.delta_time
+                step = dash.speed * self.__entity.GAME.FRAME.delta_time
                 if(left > 0):
                     if(step <= left):
                         self.VELOCITY.x = dash.speed * self.dir
                     else:
-                        self.VELOCITY.x = left * self.dir / GAME.frame.delta_time
+                        self.VELOCITY.x = left * self.dir / self.__entity.GAME.FRAME.delta_time
                 else:
                     dash.is_active = False
                     dash.destination = None
@@ -102,8 +125,8 @@ class character_physics_controller:
 
         def move(self) -> None: #moves object according to its velocity
             if(self.VELOCITY.x > 0):
-                self.dir = 1
+                self.__dir = 1
             elif(self.VELOCITY.x < 0):
-                self.dir = -1
-            offset = self.VELOCITY * GAME.frame.delta_time
-            self.entity.move(offset)
+                self.__dir = -1
+            offset = self.VELOCITY * self.__entity.GAME.FRAME.delta_time
+            self.__entity.move(offset)

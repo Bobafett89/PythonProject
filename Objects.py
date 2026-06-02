@@ -1,17 +1,17 @@
 import pygame
 from pygame import Vector2
-from Game import GAME
+from Game import Game_manager
 from BasicObjects import Basic_object, Dynamic_object
 from Physics import character_physics_controller
 
 
 class Character(Dynamic_object):
-    def __init__(self, sprite_path: str, pos: Vector2, speed: float) -> None:
-        super().__init__(sprite_path, pos)
+    def __init__(self, sprite_path: str, pos: Vector2, speed: float, game: Game_manager) -> None:
+        super().__init__(sprite_path, pos, game)
         self.__PHYSICS = character_physics_controller(self, speed)
-        self.SIZE = Vector2(0.5, 1) * 0.8
+        self._SIZE = Vector2(0.5, 1) * 0.8
 
-        TILE_SIZE = GAME.level.TILE_SIZE
+        TILE_SIZE = self.GAME.level.TILE_SIZE
         self.image = pygame.transform.scale(self.image, self.SIZE * TILE_SIZE)
         self.rect = self.image.get_rect()
         self.rect = self.rect.move_to(center=(pos * TILE_SIZE))
@@ -35,7 +35,7 @@ class Character(Dynamic_object):
         self.__PHYSICS.move()
 
     def death(self) -> None: #events which are fired when character dies
-        GAME.level.reset()
+        self.GAME.reset_level()
 
     def give_air_jumps(self, count: int) -> None: #increases current air jumps by a given amount
         self.__PHYSICS.JUMP.air_jumps += count
@@ -59,16 +59,25 @@ class Character(Dynamic_object):
            self.increase_dashes(1)
 
 class Tilemap:
-    def __init__(self) -> None:
-        self.SPRITES = pygame.sprite.Group()
-        self.MAP = []
-        for i in range(16 * GAME.level.SIZE):
+    def __init__(self, game: Game_manager) -> None:
+        self.__SPRITES = pygame.sprite.Group()
+        self.__MAP = []
+        self.__GAME = game
+        for i in range(16 * self.__GAME.level.SIZE):
             self.MAP.append([])
-            for j in range(9 * GAME.level.SIZE):
+            for j in range(9 * self.__GAME.level.SIZE):
                 self.MAP[i].append(False)
+
+    @property
+    def SPRITES(self):
+        return self.__SPRITES
+    
+    @property
+    def MAP(self):
+        return self.__MAP
     
     def addTile(self, spritePath: str, tile_pos: tuple[int, int]) -> None: #adds tile to the tilemap
         pos = Vector2(tile_pos) + Vector2(0.5, 0.5)
-        tile = Basic_object(spritePath, pos)
+        tile = Basic_object(spritePath, pos, self.__GAME)
         self.SPRITES.add(tile)
         self.MAP[tile_pos[0]][tile_pos[1]] = True

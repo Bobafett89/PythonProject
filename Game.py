@@ -1,6 +1,7 @@
 import pygame
 from pygame import Vector2
 from collections.abc import Callable
+from Structs import character_diff
 
 class Game_manager:
     def __init__(self) -> None:
@@ -65,13 +66,13 @@ class Frame:
 
     def render(self):
         self.SCREEN.fill("black")
-        for i in range(len(self.RENDER_GROUPS)):
-            self.RENDER_GROUPS[i].draw(self.SCREEN)
+        for render_group in self.RENDER_GROUPS:
+            render_group.draw(self.SCREEN)
         pygame.display.flip()
 
 class Level:
     def __init__(self, generator: Callable[[Game_manager], None], size_factor: int, game: Game_manager) -> None:
-        from Objects import Tilemap, Character
+        from Objects import Tilemap, Character, Static_collectable
 
         self.__GAME = game
         self.__SPRITES: pygame.sprite.Group = pygame.sprite.Group()
@@ -80,6 +81,7 @@ class Level:
         self.__TILE_SIZE: int = self.GAME.FRAME.SCREEN.get_width() / (16 * self.SIZE)
         self.__GROUND: Tilemap = None
         self.__HAZARD: Tilemap = None
+        self.__COLLECTABLES: list[type[Static_collectable]] = []
         self.__PLAYER: Character = None
 
     @property
@@ -120,6 +122,10 @@ class Level:
             raise RuntimeError("Player is inaccessible. Character was not added.")
         return self.__PLAYER
     
+    @property
+    def COLLECTABLES(self):
+        return self.__COLLECTABLES
+    
     def build_level(self):
         from Objects import Tilemap
         if(self.__GROUND != None):
@@ -130,9 +136,14 @@ class Level:
 
     def logic(self) -> None: #behaviour of a level
         self.PLAYER.behaviour()
+        for collectable in self.COLLECTABLES:
+            collectable.behaviour()
+            if(collectable.is_collected):
+                self.SPRITES.remove(collectable)
+                self.COLLECTABLES.remove(collectable)
         hazard_contacts = pygame.sprite.spritecollide(self.PLAYER, self.HAZARD.SPRITES, False)
         if(len(hazard_contacts) > 0):
-            self.PLAYER.death()
+            self.GAME.reset_level()
 
     def add_ground_tile(self, sprite_path: str, tile_pos: tuple[int, int]):
         self.GROUND.addTile(sprite_path, tile_pos)
@@ -146,3 +157,15 @@ class Level:
             raise RuntimeError("More than one character can't be spawned")
         self.__PLAYER = Character(sprite_path, pos, speed, self.GAME)
         self.SPRITES.add(self.PLAYER)
+
+    def add_static_collectable(self, sprite_path: str, pos: Vector2[float, float], diff: character_diff):
+        from Objects import Static_collectable
+        collectable = Static_collectable(sprite_path, pos, diff, self.GAME)
+        self.COLLECTABLES.append(collectable)
+        self.SPRITES.add(collectable)
+
+    def add_dynamic_collectable(self, sprite_path: str, pos: Vector2[float, float], diff: character_diff, speed: float, destination: Vector2[float, float]):
+        from Objects import Dynamic_collectable
+        collectable = Dynamic_collectable(sprite_path, pos, diff, speed, destination, self.GAME)
+        self.COLLECTABLES.append(collectable)
+        self.SPRITES.add(collectable)

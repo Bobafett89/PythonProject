@@ -10,7 +10,7 @@ class character_physics_controller:
             self.__GRAVITY = 10
             self.__JUMP = jump_struct()
             self.__DASH = dash_struct()
-            self.speed = speed
+            self.__SPEED = speed
             self.__dir = 1
             self.__entity = entity
 
@@ -33,6 +33,10 @@ class character_physics_controller:
         @property
         def COLLIDER_MARGIN(self):
             return self.__COLLIDER_MARGIN
+        
+        @property
+        def SPEED(self):
+            return self.__SPEED
         
         @property
         def dir(self):
@@ -95,7 +99,7 @@ class character_physics_controller:
 
         def run(self, dir: float) -> None: #applies force to the x axis on a given direction
             if(not self.DASH.is_active):
-                self.VELOCITY.x = self.speed * dir
+                self.VELOCITY.x = self.SPEED * dir
 
         def dash(self) -> None: #applies special force to the velocity if has enough dashes
             dash = self.DASH

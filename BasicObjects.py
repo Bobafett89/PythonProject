@@ -5,11 +5,11 @@ from Game import Game_manager
 
 
 class Basic_object(pygame.sprite.Sprite):
-    def __init__(self, sprite_path: str, pos: Vector2[float, float], game: Game_manager) -> None:
+    def __init__(self, sprite_path: str, pos: Vector2, game: Game_manager) -> None:
         super().__init__()
-        self._pos = pos
-        self._SIZE = Vector2(1, 1)
-        self._GAME = game
+        self._pos: Vector2 = pos
+        self._SIZE: Vector2 = Vector2(1, 1)
+        self._GAME: Game_manager = game
 
         TILE_SIZE = self.GAME.level.TILE_SIZE
         img = pygame.image.load(os.path.join(sprite_path))
@@ -18,18 +18,18 @@ class Basic_object(pygame.sprite.Sprite):
         self.rect = self.rect.move_to(center=(pos * TILE_SIZE))
 
     @property
-    def pos(self):
+    def pos(self) -> Vector2:
         return self._pos
     
     @property
-    def SIZE(self):
+    def SIZE(self) -> Vector2:
         return self._SIZE
     
     @property
-    def GAME(self):
+    def GAME(self) -> Game_manager:
         return self._GAME
 
-    def get_local_map(self) -> list[list[bool, bool, bool], list[bool, bool, bool], list[bool, bool, bool]]: #returns 3x3 tilemap around the object
+    def get_local_map(self) -> tuple[tuple[bool, bool, bool], tuple[bool, bool, bool], tuple[bool, bool, bool]]: #returns 3x3 tilemap around the object
         ground_map = self.GAME.level.GROUND.MAP
         tile_pos = self.pos // 1
         grid = [[True, True, True], [True, True, True], [True, True, True]]
@@ -38,14 +38,14 @@ class Basic_object(pygame.sprite.Sprite):
                 for j in range(3):
                     if((tile_pos.y != 0 or j != 0) and (tile_pos.y != len(ground_map[0]) - 1 or j != 2)):
                         grid[i][j] = ground_map[int(tile_pos.x) - 1 + i][int(tile_pos.y) - 1 + j]
-        return grid
+        return (tuple(grid[0]), tuple(grid[1]), tuple(grid[2]))
     
-    def get_local_pos(self) -> Vector2[float, float]: #returns position inside a tile
+    def get_local_pos(self) -> Vector2: #returns position inside a tile
         pos_in_tile = self.pos.copy()
         pos_in_tile -= pos_in_tile // 1
         return pos_in_tile
 
-    def get_border_offset(self) -> Vector2[float, float]:#returns offset from the center to border
+    def get_border_offset(self) -> Vector2:#returns offset from the center to border
         border_offset = self.SIZE / 2
         return border_offset
 
@@ -56,7 +56,7 @@ class Basic_object(pygame.sprite.Sprite):
         return (top_left, bottom_right)
     
 class Dynamic_object(Basic_object):
-    def move(self, offset: Vector2[float, float]) -> None: #moves object by a given offset
+    def move(self, offset: Vector2) -> None: #moves object by a given offset
         self._pos += offset
         self.rect = self.rect.move_to(center=(self.pos * self.GAME.level.TILE_SIZE))
 

@@ -6,8 +6,8 @@ from Structs import character_diff
 class Game_manager:
     def __init__(self) -> None:
         self.__FRAME: Frame = Frame()
-        self.__is_running: bool = True
         self.__level: Level = None
+        self.__is_running: bool = True
 
     @property
     def FRAME(self) -> Frame:
@@ -39,42 +39,43 @@ class Game_manager:
         self.__is_running = False
 
 class Frame:
-    def __init__(self):
+    def __init__(self) -> None:
         self.__SCREEN: pygame.Surface = pygame.display.set_mode()
         self.__CLOCK: pygame.Clock = pygame.time.Clock()
         self.__RENDER_GROUPS: list[pygame.sprite.Group] = []
-        self.__delta_time = 0
+        self.__delta_time: float = 0
 
     @property
-    def SCREEN(self):
+    def SCREEN(self) -> pygame.Surface:
         return self.__SCREEN
     
     @property
-    def CLOCK(self):
+    def CLOCK(self) -> pygame.time.Clock:
         return self.__CLOCK
     
     @property
-    def RENDER_GROUPS(self):
+    def RENDER_GROUPS(self) -> list[pygame.sprite.Group]:
         return self.__RENDER_GROUPS
     
     @property
-    def delta_time(self):
+    def delta_time(self) -> float:
         return self.__delta_time
     
-    def next(self):
+    def next(self) -> None:
         self.__delta_time = self.CLOCK.tick(120) / 1000
 
-    def render(self):
-        self.SCREEN.fill("black")
+    def render(self) -> None:
+        self.SCREEN.fill("#333333")
         for render_group in self.RENDER_GROUPS:
             render_group.draw(self.SCREEN)
         pygame.display.flip()
 
 class Level:
+    from Objects import Tilemap, Character, Static_collectable
     def __init__(self, generator: Callable[[Game_manager], None], size_factor: int, game: Game_manager) -> None:
         from Objects import Tilemap, Character, Static_collectable
 
-        self.__GAME = game
+        self.__GAME: Game_manager = game
         self.__SPRITES: pygame.sprite.Group = pygame.sprite.Group()
         self.__GENERATOR: Callable[[Game_manager], None] = generator
         self.__SIZE: int = size_factor
@@ -85,48 +86,48 @@ class Level:
         self.__PLAYER: Character = None
 
     @property
-    def GAME(self):
+    def GAME(self) -> Game_manager:
         return self.__GAME
     
     @property
-    def SPRITES(self):
+    def SPRITES(self) -> pygame.sprite.Group:
         return self.__SPRITES
     
     @property
-    def GENERATOR(self):
+    def GENERATOR(self) -> Callable[[Game_manager], None]:
         return self.__GENERATOR
     
     @property
-    def SIZE(self):
+    def SIZE(self) -> int:
         return self.__SIZE
     
     @property
-    def TILE_SIZE(self):
+    def TILE_SIZE(self) -> int:
         return self.__TILE_SIZE
     
     @property
-    def GROUND(self):
+    def GROUND(self) -> Tilemap:
         if(self.__GROUND == None):
             raise RuntimeError("Ground is inaccessible. The level was not built.")
         return self.__GROUND
     
     @property
-    def HAZARD(self):
+    def HAZARD(self) -> Tilemap:
         if(self.__GROUND == None):
             raise RuntimeError("Hazard is inaccessible. The level was not built.")
         return self.__HAZARD
     
     @property
-    def PLAYER(self):
+    def PLAYER(self) -> Character:
         if(self.__PLAYER == None):
             raise RuntimeError("Player is inaccessible. Character was not added.")
         return self.__PLAYER
     
     @property
-    def COLLECTABLES(self):
+    def COLLECTABLES(self) -> list[type[Static_collectable]]:
         return self.__COLLECTABLES
     
-    def build_level(self):
+    def build_level(self) -> None:
         from Objects import Tilemap
         if(self.__GROUND != None):
             raise RuntimeError("The level was already built.")
@@ -145,26 +146,26 @@ class Level:
         if(len(hazard_contacts) > 0):
             self.GAME.reset_level()
 
-    def add_ground_tile(self, sprite_path: str, tile_pos: tuple[int, int]):
+    def add_ground_tile(self, sprite_path: str, tile_pos: tuple[int, int]) -> None:
         self.GROUND.addTile(sprite_path, tile_pos)
         
-    def add_hazard_tile(self, sprite_path: str, tile_pos: tuple[int, int]):
+    def add_hazard_tile(self, sprite_path: str, tile_pos: tuple[int, int]) -> None:
         self.HAZARD.addTile(sprite_path, tile_pos)
 
-    def add_character(self, sprite_path: str, pos: Vector2[float, float], speed: float):
+    def add_character(self, sprite_path: str, pos: Vector2[float, float], speed: float) -> None:
         from Objects import Character
         if(self.__PLAYER != None):
             raise RuntimeError("More than one character can't be spawned")
         self.__PLAYER = Character(sprite_path, pos, speed, self.GAME)
         self.SPRITES.add(self.PLAYER)
 
-    def add_static_collectable(self, sprite_path: str, pos: Vector2[float, float], diff: character_diff):
+    def add_static_collectable(self, sprite_path: str, pos: Vector2[float, float], diff: character_diff) -> None:
         from Objects import Static_collectable
         collectable = Static_collectable(sprite_path, pos, diff, self.GAME)
         self.COLLECTABLES.append(collectable)
         self.SPRITES.add(collectable)
 
-    def add_dynamic_collectable(self, sprite_path: str, pos: Vector2[float, float], diff: character_diff, speed: float, destination: Vector2[float, float]):
+    def add_dynamic_collectable(self, sprite_path: str, pos: Vector2[float, float], diff: character_diff, speed: float, destination: Vector2[float, float]) -> None:
         from Objects import Dynamic_collectable
         collectable = Dynamic_collectable(sprite_path, pos, diff, speed, destination, self.GAME)
         self.COLLECTABLES.append(collectable)

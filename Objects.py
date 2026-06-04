@@ -8,48 +8,52 @@ from Structs import character_diff
 class Character(Dynamic_object):
     def __init__(self, sprite_path: str, pos: Vector2, speed: float, game: Game_manager) -> None:
         super().__init__(sprite_path, pos, game)
-        self.__PHYSICS = character_physics_controller(self, speed)
+        self.__PHYSICS: character_physics_controller = character_physics_controller(self, speed)
         self._SIZE = Vector2(0.5, 1) * 0.8
 
         TILE_SIZE = self.GAME.level.TILE_SIZE
         self.image = pygame.transform.scale(self.image, self.SIZE * TILE_SIZE)
         self.rect = self.image.get_rect()
         self.rect = self.rect.move_to(center=(pos * TILE_SIZE))
+
+    @property
+    def PHYSICS(self) -> character_physics_controller:
+        return self.__PHYSICS
     
     def behaviour(self) -> None:
         keys, new_keys = pygame.key.get_pressed(), pygame.key.get_just_pressed()
 
-        if(new_keys[pygame.K_LSHIFT] or self.__PHYSICS.DASH.is_active):
-            self.__PHYSICS.dash()
+        if(new_keys[pygame.K_LSHIFT] or self.PHYSICS.DASH.is_active):
+            self.PHYSICS.dash()
 
-        self.__PHYSICS.apply_grav()
+        self.PHYSICS.apply_grav()
 
         dir = 1 * keys[pygame.K_d] - 1 * keys[pygame.K_a]
-        self.__PHYSICS.run(dir)
+        self.PHYSICS.run(dir)
 
-        if(keys[pygame.K_w] and self.__PHYSICS.JUMP.on_ground or new_keys[pygame.K_w]):
-            self.__PHYSICS.jump()
+        if(keys[pygame.K_w] and self.PHYSICS.JUMP.on_ground or new_keys[pygame.K_w]):
+            self.PHYSICS.jump()
 
         self.__debug()
-        self.__PHYSICS.collide()
-        self.__PHYSICS.move()
+        self.PHYSICS.collide()
+        self.PHYSICS.move()
 
     def give_air_jumps(self, count: int) -> None: #increases current air jumps by a given amount
-        self.__PHYSICS.JUMP.air_jumps += count
+        self.PHYSICS.JUMP.air_jumps += count
 
     def give_dashes(self, count: int) -> None: #increases current dashes by a given amount
-        self.__PHYSICS.DASH.count += count
+        self.PHYSICS.DASH.count += count
 
     def increase_air_jumps(self, count: int) -> None: #increases default amount of air jumps by a given amount
-        self.__PHYSICS.JUMP.def_air_jumps += count
+        self.PHYSICS.JUMP.def_air_jumps += count
 
     def increase_dashes(self, count: int) -> None: #increases default amount of dashes by a given amount
-        self.__PHYSICS.DASH.def_count += count
+        self.PHYSICS.DASH.def_count += count
 
     def __debug(self) -> None: #function to makes testing easier
         keys, new_keys = pygame.key.get_pressed(), pygame.key.get_just_pressed()
         if(keys[pygame.K_UP]):
-            self.__PHYSICS.VELOCITY.y = -self.__PHYSICS.JUMP.force
+            self.PHYSICS.VELOCITY.y = -self.PHYSICS.JUMP.force
         if(new_keys[pygame.K_1]):
            self.increase_air_jumps(1)
         if(new_keys[pygame.K_2]):
@@ -57,20 +61,20 @@ class Character(Dynamic_object):
 
 class Tilemap:
     def __init__(self, game: Game_manager) -> None:
-        self.__SPRITES = pygame.sprite.Group()
-        self.__MAP = []
-        self.__GAME = game
+        self.__GAME: Game_manager = game
+        self.__SPRITES: pygame.sprite.Group = pygame.sprite.Group()
+        self.__MAP: list[list[bool]] = []
         for i in range(16 * self.__GAME.level.SIZE):
             self.MAP.append([])
             for j in range(9 * self.__GAME.level.SIZE):
                 self.MAP[i].append(False)
 
     @property
-    def SPRITES(self):
+    def SPRITES(self) -> pygame.sprite.Group:
         return self.__SPRITES
     
     @property
-    def MAP(self):
+    def MAP(self) -> list[list[bool]]:
         return self.__MAP
     
     def addTile(self, spritePath: str, tile_pos: tuple[int, int]) -> None: #adds tile to the tilemap
@@ -80,20 +84,20 @@ class Tilemap:
         self.MAP[tile_pos[0]][tile_pos[1]] = True
 
 class Static_collectable(Dynamic_object):
-    def __init__(self, sprite_path: str, pos: Vector2[float, float], diff: character_diff, game: Game_manager):
+    def __init__(self, sprite_path: str, pos: Vector2, diff: character_diff, game: Game_manager):
         super().__init__(sprite_path, pos, game)
         self.__DIFF: character_diff = diff
         self.__is_collected: bool = False
 
     @property
-    def DIFF(self):
+    def DIFF(self) -> character_diff:
         return self.__DIFF
     
     @property
-    def is_collected(self):
+    def is_collected(self) -> bool:
         return self.__is_collected
 
-    def behaviour(self):
+    def behaviour(self) -> None:
         character = self.GAME.level.PLAYER
         collide_with_character = self.rect.colliderect(character)
         if(collide_with_character and not self.__is_collected):
@@ -104,47 +108,47 @@ class Static_collectable(Dynamic_object):
             self.__is_collected = True
 
 class Dynamic_collectable(Static_collectable):
-    def __init__(self, sprite_path: str, pos: Vector2[float, float], diff: character_diff, speed: float, destination: Vector2[float, float], game):
+    def __init__(self, sprite_path: str, pos: Vector2, diff: character_diff, speed: float, destination: Vector2, game):
         super().__init__(sprite_path, pos, diff, game)
         self.__SPEED: float = speed
-        self.__START: Vector2[float, float] = self.pos.copy()
-        self.__DESTINATION: Vector2[float, float] = destination
-        self.__DIR: Vector2[float, float] = (destination - self.pos).normalize()
+        self.__START: Vector2 = self.pos.copy()
+        self.__DESTINATION: Vector2 = destination
+        self.__DIR: Vector2 = (destination - self.pos).normalize()
         self.__to_end: bool = True
 
     @property
-    def SPEED(self):
+    def SPEED(self) -> float:
         return self.__SPEED
     
     @property
-    def START(self):
+    def START(self) -> Vector2:
         return self.__START
 
     @property
-    def DESTINATION(self):
+    def DESTINATION(self) -> Vector2:
         return self.__DESTINATION
 
     @property
-    def DIR(self):
+    def DIR(self) -> Vector2:
         return self.__DIR
 
     @property
-    def to_end(self):
+    def to_end(self) -> bool:
         return self.__to_end
 
-    def behaviour(self):
-        target: Vector2[float, float] = None
+    def behaviour(self) -> None:
+        target: Vector2 = None
         if(self.to_end):
             target = self.DESTINATION
         else:
             target = self.START
-        left: float = self.pos.distance_to(target)
-        step: float = self.SPEED * self.GAME.FRAME.delta_time
-        offset: Vector2[float, float] = None
+        left = self.pos.distance_to(target)
+        step = self.SPEED * self.GAME.FRAME.delta_time
+        offset = self.DIR.copy()
         if(step < left):
-            offset = self.DIR * step
+            offset *= step
         else:
-            offset = self.DIR * left
+            offset *= left
             self.__to_end = not self.__to_end
         offset *= 2 * self.to_end - 1
         self.move(offset)

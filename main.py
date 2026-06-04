@@ -1,7 +1,8 @@
 import pygame
 from pygame import Vector2
-from Game import Game_manager
+from Game import Game_manager, Level
 from Objects import character_diff as diff
+from UI import UIScreen
 
 def test_level(game: Game_manager):
     level = game.level
@@ -21,19 +22,35 @@ def test_level(game: Game_manager):
     level.add_static_collectable("Assets/CharBlock.png", Vector2(10.5, 8.5), diff(0, 1, 0, 1))
     level.add_dynamic_collectable("Assets/CharBlock.png", Vector2(12.5, 8.5), diff(1, 0, 1, 0), 5, Vector2(12.5, 0.5))
 
+def close_game(game: Game_manager) -> None:
+    game.close_game()
+
+def start_level(game: Game_manager) -> None:
+    game.start_level_from_file("Levels/test_level.json")
 
 
 pygame.init()
 GAME = Game_manager()
-GAME.start_level(test_level, 1)
+menu = UIScreen(GAME)
+menu.add_button("Assets/CharBlock.png", Vector2(25, 20), Vector2(50, 20), start_level)
+menu.add_button("Assets/HazardBlock.png", Vector2(25, 60), Vector2(50, 20), close_game)
+# GAME.start_level_from_file("Levels/test_level.json")
+GAME.start(menu)
+
 
 while GAME.is_running:
-    keys = pygame.key.get_pressed()
     for event in pygame.event.get():
-        if event.type == pygame.QUIT or keys[pygame.K_ESCAPE]:
+        if event.type == pygame.QUIT:
             GAME.close_game()
+        if event.type == pygame.KEYDOWN:
+            keys = pygame.key.get_pressed()
+            if(keys[pygame.K_ESCAPE]):
+                GAME.close_level()
 
-    GAME.level.logic()
+    if(GAME.UI.ui != None):
+        GAME.UI.ui.check_buttons()
+    if(GAME.level != None):
+        GAME.level.logic()
     GAME.FRAME.render()
     GAME.FRAME.next()
 

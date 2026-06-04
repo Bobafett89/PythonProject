@@ -5,7 +5,7 @@ from BasicObjects import Dynamic_object
 
 class character_physics_controller:
         def __init__(self, entity: type[Dynamic_object], speed: float) -> None:
-            self.__COLLIDER_MARGIN: float = 0.015
+            self.__COLLIDER_MARGIN: float = 0.001
             self.__VELOCITY: Vector2 = Vector2(0, 0)
             self.__GRAVITY: float = 10
             self.__JUMP: jump_struct = jump_struct()
@@ -65,9 +65,9 @@ class character_physics_controller:
             if(self.VELOCITY.y != 0):
                 self.JUMP.on_ground = False
                 moving_down = self.VELOCITY.y > 0
-                left = top_left.x > 0 or not map[0][2 * moving_down]
+                left = top_left.x >= 0 or not map[0][2 * moving_down]
                 middle = not map[1][2 * moving_down]
-                right = bottom_right.x < 1 or not map[2][2 * moving_down]
+                right = bottom_right.x <= 1 or not map[2][2 * moving_down]
                 can_move = left and middle and right
                 if(not can_move):
                     dir = 2 * moving_down - 1
@@ -89,9 +89,9 @@ class character_physics_controller:
 
             if(self.VELOCITY.x != 0):
                 moving_right = self.VELOCITY.x > 0
-                top = top_left.y > 0 or not map[2 * moving_right][0]
+                top = top_left.y >= 0 or not map[2 * moving_right][0]
                 middle = not map[2 * moving_right][1]
-                bot = bottom_right.y < 1 or not map[2 * moving_right][2]
+                bot = bottom_right.y <= 1 or not map[2 * moving_right][2]
                 can_move = top and middle and bot
                 if(not can_move):
                     dir = 2 * moving_right - 1

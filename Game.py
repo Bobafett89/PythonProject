@@ -2,34 +2,57 @@ import pygame
 from pygame import Vector2
 from collections.abc import Callable
 from Structs import character_diff
+import json
 
 class Game_manager:
     def __init__(self) -> None:
+        self.__is_running: bool = False
         self.__FRAME: Frame = Frame()
+        self.__UI = UI(self)
         self.__level: Level = None
-        self.__is_running: bool = True
 
     @property
     def FRAME(self) -> Frame:
         return self.__FRAME
     
     @property
+    def UI(self) -> UI:
+        return self.__UI
+
+    @property
     def level(self) -> Level:
-        if(self.__level == None):
-            raise TypeError("Level was not initialized")
         return self.__level
     
     @property
     def is_running(self) -> bool:
         return self.__is_running
+    
+    def start(self, start_menu: UIScreen):
+        self.UI.set_start_menu(start_menu)
+        self.UI.open_start_menu()
+        self.__is_running = True
 
+
+    def start_level_from_file(self, level_path: str):
+        level_file = open(level_path)
+        level_structure = json.load(level_file)
+        level_file.close()
+        generator = Level.parse_level(level_structure)
+        self.start_level(generator, level_structure["size"])
+        
     def start_level(self, generator: Callable[[Game_manager], None], size_factor: int) -> None:
         self.__level = Level(generator, size_factor, self)
         self.level.build_level()
+        self.UI.clear_ui()
         self.FRAME.RENDER_GROUPS.clear()
         self.FRAME.RENDER_GROUPS.append(self.level.SPRITES)
         self.FRAME.RENDER_GROUPS.append(self.level.GROUND.SPRITES)
         self.FRAME.RENDER_GROUPS.append(self.level.HAZARD.SPRITES)
+
+    def close_level(self):
+        self.__level = None
+        self.FRAME.RENDER_GROUPS.clear()
+        self.UI.open_start_menu()
 
     def reset_level(self) -> None:
         level = self.level
@@ -37,6 +60,45 @@ class Game_manager:
 
     def close_game(self) -> None:
         self.__is_running = False
+
+class UI:
+    from UI import UIScreen
+    def __init__(self, game: Game_manager) -> None:
+        from UI import UIScreen
+        self.__start_menu: UIScreen = None
+        self.__ui: UIScreen = None
+        self.__GAME: Game_manager = game
+
+    @property
+    def start_menu(self) -> UIScreen:
+        return self.__start_menu
+    
+    @property
+    def ui(self) -> UIScreen:
+        return self.__ui
+    
+    @property
+    def GAME(self) -> Game_manager:
+        return self.__GAME
+    
+    def set_start_menu(self, start_menu: UIScreen) -> None:
+        self.__start_menu = start_menu
+
+    def open_start_menu(self):
+        self.switch_ui(self.start_menu)
+
+    def switch_ui(self, ui: UIScreen) -> None:
+        self.clear_ui()
+        self.__ui = ui
+        self.GAME.FRAME.RENDER_GROUPS.append(self.ui.SPRITES)
+
+    def clear_ui(self):
+        try:
+            self.GAME.FRAME.RENDER_GROUPS.remove(self.ui.SPRITES)
+        except:
+            pass
+        finally:
+            self.__ui = None
 
 class Frame:
     def __init__(self) -> None:
@@ -62,7 +124,7 @@ class Frame:
         return self.__delta_time
     
     def next(self) -> None:
-        self.__delta_time = self.CLOCK.tick(120) / 1000
+        self.__delta_time = self.CLOCK.tick() / 1000
 
     def render(self) -> None:
         self.SCREEN.fill("#333333")
@@ -127,6 +189,35 @@ class Level:
     def COLLECTABLES(self) -> list[type[Static_collectable]]:
         return self.__COLLECTABLES
     
+    @staticmethod
+    def parse_level(level_structure: str) -> Callable[[Game_manager], None]:
+        def generator(game: Game_manager):
+            level = game.level
+            character = level_structure["char"]
+            ground = level_structure["grnd"]
+            hazard = level_structure["hzrd"]
+            static_collectables = level_structure["stc_coll"]
+            dynamic_collectables = level_structure["dnm_coll"]
+            level.add_character(character["spr"], Vector2(character["pos"][0], character["pos"][1]), character["speed"])
+            for tile in ground:
+                for pos in tile["pos"]:
+                    level.add_ground_tile(tile["spr"], (pos[0], pos[1]))
+            for tile in hazard:
+                for pos in tile["pos"]:
+                    level.add_hazard_tile(tile["spr"], (pos[0], pos[1]))
+            for tile in static_collectables:
+                for pos in tile["pos"]:
+                    diff = character_diff(tile["diff"][0], tile["diff"][1], tile["diff"][2], tile["diff"][3])
+                    level.add_static_collectable(tile["spr"], Vector2(pos[0], pos[1]), diff)
+            for tile in dynamic_collectables:
+                for i in range(len(tile["pos"])):
+                    pos = tile["pos"][i]
+                    dest = tile["dest"][i]
+                    diff = character_diff(tile["diff"][0], tile["diff"][1], tile["diff"][2], tile["diff"][3])
+                    level.add_dynamic_collectable(tile["spr"], Vector2(pos[0], pos[1]), diff, tile["speed"], Vector2(dest[0], dest[1]))
+        
+        return generator
+
     def build_level(self) -> None:
         from Objects import Tilemap
         if(self.__GROUND != None):

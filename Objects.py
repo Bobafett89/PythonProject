@@ -78,13 +78,18 @@ class Tilemap:
         return self.__MAP
     
     def addTile(self, spritePath: str, tile_pos: tuple[int, int]) -> None: #adds tile to the tilemap
+        if(not isinstance(tile_pos, tuple)):
+            raise ValueError("Tile_pos is not a tuple")
         pos = Vector2(tile_pos) + Vector2(0.5, 0.5)
         tile = Basic_object(spritePath, pos, self.__GAME)
         self.SPRITES.add(tile)
         self.MAP[tile_pos[0]][tile_pos[1]] = True
 
 class Static_collectable(Dynamic_object):
-    def __init__(self, sprite_path: str, pos: Vector2, diff: character_diff, game: Game_manager):
+    def __init__(self, sprite_path: str, pos: Vector2, diff: character_diff, game: Game_manager) -> None:
+        if(not isinstance(diff, character_diff)):
+            raise ValueError("Diff variable is not character_diff")
+
         super().__init__(sprite_path, pos, game)
         self.__DIFF: character_diff = diff
         self.__is_collected: bool = False
@@ -108,7 +113,7 @@ class Static_collectable(Dynamic_object):
             self.__is_collected = True
 
 class Dynamic_collectable(Static_collectable):
-    def __init__(self, sprite_path: str, pos: Vector2, diff: character_diff, speed: float, destination: Vector2, game):
+    def __init__(self, sprite_path: str, pos: Vector2, diff: character_diff, speed: float, destination: Vector2, game: Game_manager) -> None:
         super().__init__(sprite_path, pos, diff, game)
         self.__SPEED: float = speed
         self.__START: Vector2 = self.pos.copy()

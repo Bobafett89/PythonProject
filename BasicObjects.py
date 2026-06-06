@@ -3,16 +3,18 @@ import pygame
 from pygame import Vector2
 from Game import Game_manager
 
-
 class Basic_object(pygame.sprite.Sprite):
     def __init__(self, sprite_path: str, pos: Vector2, game: Game_manager) -> None:
+        if(not isinstance(pos, Vector2)):
+            raise ValueError("Position variable is not Vector2 type")
+
         super().__init__()
         self._pos: Vector2 = pos
         self._SIZE: Vector2 = Vector2(1, 1)
         self._GAME: Game_manager = game
 
         TILE_SIZE = self.GAME.level.TILE_SIZE
-        img = pygame.image.load(os.path.join(sprite_path))
+        img = pygame.image.load(os.path.join("Assets", sprite_path))
         self.image = pygame.transform.scale(img, (TILE_SIZE, TILE_SIZE))
         self.rect = self.image.get_rect()
         self.rect = self.rect.move_to(center=(pos * TILE_SIZE))
@@ -57,6 +59,8 @@ class Basic_object(pygame.sprite.Sprite):
     
 class Dynamic_object(Basic_object):
     def move(self, offset: Vector2) -> None: #moves object by a given offset
+        if(type(offset) != Vector2):
+            raise ValueError("Offset is not Vector2 type")
         self._pos += offset
         self.rect = self.rect.move_to(center=(self.pos * self.GAME.level.TILE_SIZE))
 

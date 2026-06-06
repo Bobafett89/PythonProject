@@ -5,6 +5,11 @@ from BasicObjects import Dynamic_object
 
 class character_physics_controller:
         def __init__(self, entity: type[Dynamic_object], speed: float) -> None:
+            if(not issubclass(type(entity), Dynamic_object)):
+                raise ValueError("Entity variable is not subclass of Dynamic_object")
+            if(not isinstance(speed, int) and not isinstance(speed, float)):
+                raise ValueError("Speed variable is not a real number")
+
             self.__COLLIDER_MARGIN: float = 0.001
             self.__VELOCITY: Vector2 = Vector2(0, 0)
             self.__GRAVITY: float = 10

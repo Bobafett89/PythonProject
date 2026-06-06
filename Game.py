@@ -27,13 +27,12 @@ class Game_manager:
     def is_running(self) -> bool:
         return self.__is_running
     
-    def start(self, start_menu: UIScreen):
+    def start(self, start_menu: UIScreen) -> None:
         self.UI.set_start_menu(start_menu)
         self.UI.open_start_menu()
         self.__is_running = True
 
-
-    def start_level_from_file(self, level_path: str):
+    def start_level_from_file(self, level_path: str) -> None:
         level_file = open(level_path)
         level_structure = json.load(level_file)
         level_file.close()
@@ -49,56 +48,68 @@ class Game_manager:
         self.FRAME.RENDER_GROUPS.append(self.level.GROUND.SPRITES)
         self.FRAME.RENDER_GROUPS.append(self.level.HAZARD.SPRITES)
 
-    def close_level(self):
+    def close_level(self) -> None:
         self.__level = None
         self.FRAME.RENDER_GROUPS.clear()
         self.UI.open_start_menu()
 
     def reset_level(self) -> None:
-        level = self.level
-        self.start_level(level.GENERATOR, level.SIZE)
+        try:
+            level = self.level
+            self.start_level(level.GENERATOR, level.SIZE)
+        except:
+            self.close_level()
 
     def close_game(self) -> None:
         self.__is_running = False
 
 class UI:
-    from UI import UIScreen
+    from UI import UI_Screen
     def __init__(self, game: Game_manager) -> None:
-        from UI import UIScreen
-        self.__start_menu: UIScreen = None
-        self.__ui: UIScreen = None
+        from UI import UI_Screen
+        if(not isinstance(game, Game_manager)):
+            raise ValueError("Game variable is not Game_manager")
+        self.__start_menu: UI_Screen = None
+        self.__ui: UI_Screen = None
         self.__GAME: Game_manager = game
 
     @property
-    def start_menu(self) -> UIScreen:
+    def start_menu(self) -> UI_Screen:
         return self.__start_menu
     
     @property
-    def ui(self) -> UIScreen:
+    def ui(self) -> UI_Screen:
         return self.__ui
     
     @property
     def GAME(self) -> Game_manager:
         return self.__GAME
     
-    def set_start_menu(self, start_menu: UIScreen) -> None:
+    def set_start_menu(self, start_menu: UI_Screen) -> None:
+        if(not isinstance(start_menu, self.UI_Screen)):
+            raise ValueError("Start_menu variable is not UI_Screen")
         self.__start_menu = start_menu
 
-    def open_start_menu(self):
+    def open_start_menu(self) -> None:
         self.switch_ui(self.start_menu)
 
-    def switch_ui(self, ui: UIScreen) -> None:
+    def switch_ui(self, ui: UI_Screen) -> None:
+        if(not isinstance(ui, self.UI_Screen)):
+            raise ValueError("ui variable is not UI_Screen")
         self.clear_ui()
         self.__ui = ui
         self.GAME.FRAME.RENDER_GROUPS.append(self.ui.SPRITES)
 
-    def clear_ui(self):
-        try:
+    def clear_ui(self) -> None:
+        if(self.ui != None and self.ui.SPRITES in self.GAME.FRAME.RENDER_GROUPS):
             self.GAME.FRAME.RENDER_GROUPS.remove(self.ui.SPRITES)
+        self.__ui = None
+
+    def press_buttons(self) -> None:
+        try:
+            self.ui.press_buttons()
         except:
             pass
-        finally:
-            self.__ui = None
 
 class Frame:
     def __init__(self) -> None:
@@ -136,7 +147,10 @@ class Level:
     from Objects import Tilemap, Character, Static_collectable
     def __init__(self, generator: Callable[[Game_manager], None], size_factor: int, game: Game_manager) -> None:
         from Objects import Tilemap, Character, Static_collectable
-
+        if(not callable(generator)):
+            raise ValueError("Genarator variable is not a function")
+        if(not isinstance(size_factor, int)):
+            raise ValueError("Size_factor is not an int")
         self.__GAME: Game_manager = game
         self.__SPRITES: pygame.sprite.Group = pygame.sprite.Group()
         self.__GENERATOR: Callable[[Game_manager], None] = generator
@@ -190,7 +204,7 @@ class Level:
         return self.__COLLECTABLES
     
     @staticmethod
-    def parse_level(level_structure: str) -> Callable[[Game_manager], None]:
+    def parse_level(level_structure: dict) -> Callable[[Game_manager], None]:
         def generator(game: Game_manager):
             level = game.level
             character = level_structure["char"]
@@ -243,20 +257,20 @@ class Level:
     def add_hazard_tile(self, sprite_path: str, tile_pos: tuple[int, int]) -> None:
         self.HAZARD.addTile(sprite_path, tile_pos)
 
-    def add_character(self, sprite_path: str, pos: Vector2[float, float], speed: float) -> None:
+    def add_character(self, sprite_path: str, pos: Vector2, speed: float) -> None:
         from Objects import Character
         if(self.__PLAYER != None):
             raise RuntimeError("More than one character can't be spawned")
         self.__PLAYER = Character(sprite_path, pos, speed, self.GAME)
         self.SPRITES.add(self.PLAYER)
 
-    def add_static_collectable(self, sprite_path: str, pos: Vector2[float, float], diff: character_diff) -> None:
+    def add_static_collectable(self, sprite_path: str, pos: Vector2, diff: character_diff) -> None:
         from Objects import Static_collectable
         collectable = Static_collectable(sprite_path, pos, diff, self.GAME)
         self.COLLECTABLES.append(collectable)
         self.SPRITES.add(collectable)
 
-    def add_dynamic_collectable(self, sprite_path: str, pos: Vector2[float, float], diff: character_diff, speed: float, destination: Vector2[float, float]) -> None:
+    def add_dynamic_collectable(self, sprite_path: str, pos: Vector2, diff: character_diff, speed: float, destination: Vector2) -> None:
         from Objects import Dynamic_collectable
         collectable = Dynamic_collectable(sprite_path, pos, diff, speed, destination, self.GAME)
         self.COLLECTABLES.append(collectable)

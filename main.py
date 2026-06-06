@@ -1,8 +1,8 @@
 import pygame
 from pygame import Vector2
-from Game import Game_manager, Level
+from Game import Game_manager
 from Objects import character_diff as diff
-from UI import UIScreen
+from UI import UI_Screen
 
 def test_level(game: Game_manager):
     level = game.level
@@ -31,10 +31,9 @@ def start_level(game: Game_manager) -> None:
 
 pygame.init()
 GAME = Game_manager()
-menu = UIScreen(GAME)
-menu.add_button("Assets/CharBlock.png", Vector2(25, 20), Vector2(50, 20), start_level)
-menu.add_button("Assets/HazardBlock.png", Vector2(25, 60), Vector2(50, 20), close_game)
-# GAME.start_level_from_file("Levels/test_level.json")
+menu = UI_Screen(GAME)
+menu.add_button("CharBlock.png", Vector2(25, 20), Vector2(50, 20), start_level)
+menu.add_button("HazardBlock.png", Vector2(25, 60), Vector2(50, 20), close_game)
 GAME.start(menu)
 
 
@@ -48,7 +47,7 @@ while GAME.is_running:
                 GAME.close_level()
 
     if(GAME.UI.ui != None):
-        GAME.UI.ui.check_buttons()
+        GAME.UI.press_buttons()
     if(GAME.level != None):
         GAME.level.logic()
     GAME.FRAME.render()

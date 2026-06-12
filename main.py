@@ -28,14 +28,12 @@ def close_game(game: Game_manager) -> None:
 def start_level(game: Game_manager) -> None:
     game.start_level_from_file("Levels/test_level.json")
 
-
 pygame.init()
 GAME = Game_manager()
 menu = UI_Screen(GAME)
 menu.add_button("CharBlock.png", Vector2(25, 20), Vector2(50, 20), start_level)
 menu.add_button("HazardBlock.png", Vector2(25, 60), Vector2(50, 20), close_game)
 GAME.start(menu)
-
 
 while GAME.is_running:
     for event in pygame.event.get():
@@ -45,6 +43,8 @@ while GAME.is_running:
             keys = pygame.key.get_pressed()
             if(keys[pygame.K_ESCAPE]):
                 GAME.close_level()
+            if(keys[pygame.K_END]):
+                GAME.close_game()
 
     if(GAME.UI.ui != None):
         GAME.UI.press_buttons()

@@ -2,19 +2,15 @@ import pygame
 from pygame import Vector2
 from Structs import jump_struct, dash_struct
 from BasicObjects import Dynamic_object
+from collections.abc import Callable
 
 class character_physics_controller:
-        def __init__(self, entity: type[Dynamic_object], speed: float) -> None:
-            if(not issubclass(type(entity), Dynamic_object)):
-                raise ValueError("Entity variable is not subclass of Dynamic_object")
-            if(not isinstance(speed, int) and not isinstance(speed, float)):
-                raise ValueError("Speed variable is not a real number")
-
+        def __init__(self, entity: type[Dynamic_object], speed: float, jump_force: float, gravity: float, dash_dist: float, dash_speed: float) -> None:
             self.__COLLIDER_MARGIN: float = 0.001
             self.__VELOCITY: Vector2 = Vector2(0, 0)
-            self.__GRAVITY: float = 10
-            self.__JUMP: jump_struct = jump_struct()
-            self.__DASH: dash_struct = dash_struct()
+            self.__GRAVITY: float = gravity
+            self.__JUMP: jump_struct = jump_struct(force=jump_force)
+            self.__DASH: dash_struct = dash_struct(distance=dash_dist, speed=dash_speed)
             self.__SPEED: float = speed
             self.__ENTITY: type[Dynamic_object] = entity
             self.__dir: float = 1
@@ -52,16 +48,34 @@ class character_physics_controller:
             return self.__dir
 
         def collide(self) -> None: #stops object from moving if touches ground
-            def grounded() -> None: #events which are fired when object touches ground
-                self.JUMP.on_ground = True
-                if(self.JUMP.air_jumps < self.JUMP.def_air_jumps):
-                    self.JUMP.air_jumps = self.JUMP.def_air_jumps
-                if(self.DASH.count < self.DASH.def_count):
-                    self.DASH.count = self.DASH.def_count
+            def hit_floor() -> None: #events which are fired when object touches ground
+                if(self.VELOCITY.y > 0):
+                    self.JUMP.on_ground = True
+                    if(self.JUMP.air_jumps < self.JUMP.def_air_jumps):
+                        self.JUMP.air_jumps = self.JUMP.def_air_jumps
+                    if(self.DASH.count < self.DASH.def_count):
+                        self.DASH.count = self.DASH.def_count
 
             def hit_wall() -> None: #events which are fired when object hits wall
                 self.DASH.is_active = False
                 self.DASH.destination = None
+
+            def can_move(start: float, end: float, map: tuple[bool, bool, bool]) -> bool:
+                left = start >= 0 or not map[0]
+                middle = not map[1]
+                right = end <= 1 or not map[2]
+                return left and middle and right
+
+            def change_velocity(moving_pos: bool, velocity: float, pos_in_tile: float, border_offset: float, hit_ground: Callable[[], None]) -> float:
+                dir = 2 * moving_pos - 1
+                collider_edge = pos_in_tile + (border_offset + self.COLLIDER_MARGIN) * dir
+                distance = 1 * moving_pos - collider_edge
+                is_touching = distance * dir <= 0
+                step = velocity * self.ENTITY.GAME.FRAME.delta_time
+                if(is_touching or abs(step) > abs(distance)):
+                    hit_ground()
+                    velocity = distance / self.ENTITY.GAME.FRAME.delta_time
+                return velocity
 
             pos_in_tile, border_offset = self.ENTITY.get_local_pos(), self.ENTITY.get_border_offset()
             top_left, bottom_right = self.ENTITY.get_border()
@@ -70,49 +84,15 @@ class character_physics_controller:
             if(self.VELOCITY.y != 0):
                 self.JUMP.on_ground = False
                 moving_down = self.VELOCITY.y > 0
-                left = top_left.x >= 0 or not map[0][2 * moving_down]
-                middle = not map[1][2 * moving_down]
-                right = bottom_right.x <= 1 or not map[2][2 * moving_down]
-                can_move = left and middle and right
-                if(not can_move):
-                    dir = 2 * moving_down - 1
-                    collider_edge = pos_in_tile.y + (border_offset.y + self.COLLIDER_MARGIN) * dir
-                    border = 1 * moving_down
-                    is_touching = (border - collider_edge) * dir <= 0
-                    if(is_touching):
-                        self.ENTITY.move(Vector2(0, border - collider_edge))
-                        self.VELOCITY.y = 0
-                        if(moving_down):
-                            grounded()
-                    else:
-                        distance = border - collider_edge
-                        step = self.VELOCITY.y * self.ENTITY.GAME.FRAME.delta_time
-                        if(abs(step) > abs(distance)):
-                            self.VELOCITY.y = distance / self.ENTITY.GAME.FRAME.delta_time
-                            if(moving_down):
-                                grounded()
+                local_map = (map[0][2 * moving_down], map[1][2 * moving_down], map[2][2 * moving_down])
+                if(not can_move(top_left.x, bottom_right.x, local_map)):
+                    self.VELOCITY.y = change_velocity(moving_down, self.VELOCITY.y, pos_in_tile.y, border_offset.y, hit_floor)
 
             if(self.VELOCITY.x != 0):
                 moving_right = self.VELOCITY.x > 0
-                top = top_left.y >= 0 or not map[2 * moving_right][0]
-                middle = not map[2 * moving_right][1]
-                bot = bottom_right.y <= 1 or not map[2 * moving_right][2]
-                can_move = top and middle and bot
-                if(not can_move):
-                    dir = 2 * moving_right - 1
-                    collider_edge = pos_in_tile.x + (border_offset.x + self.COLLIDER_MARGIN) * dir
-                    border = 1 * moving_right
-                    is_touching = (border - collider_edge) * dir <= 0
-                    if(is_touching):
-                        self.ENTITY.move(Vector2(border - collider_edge, 0))
-                        self.VELOCITY.x = 0
-                        hit_wall()
-                    else:
-                        distance = border - collider_edge
-                        step = self.VELOCITY.x * self.ENTITY.GAME.FRAME.delta_time
-                        if(abs(step) > abs(distance)):
-                            self.VELOCITY.x = distance / self.ENTITY.GAME.FRAME.delta_time
-                            hit_wall()
+                local_map = (map[2 * moving_right][0], map[2 * moving_right][1], map[2 * moving_right][2])
+                if(not can_move(top_left.y, bottom_right.y, local_map)):
+                    self.VELOCITY.x = change_velocity(moving_right, self.VELOCITY.x, pos_in_tile.x, border_offset.x, hit_wall)
 
         def apply_grav(self) -> None: #applies gravity to velocity
             if(not self.DASH.is_active):

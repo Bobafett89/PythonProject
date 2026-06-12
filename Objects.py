@@ -6,9 +6,14 @@ from Physics import character_physics_controller
 from Structs import character_diff
 
 class Character(Dynamic_object):
-    def __init__(self, sprite_path: str, pos: Vector2, speed: float, game: Game_manager) -> None:
+    def __init__(self, sprite_path: str, pos: pygame.typing.Point, jump_dist: float, jump_height: float, jump_time: float, dash_dist: float, dash_time: float, game: Game_manager) -> None:
+        jump_force = 2 * jump_height / jump_time
+        gravity = jump_force / jump_time
+        speed = jump_dist / (2 * jump_time)
+        dash_speed = dash_dist / dash_time
+
         super().__init__(sprite_path, pos, game)
-        self.__PHYSICS: character_physics_controller = character_physics_controller(self, speed)
+        self.__PHYSICS: character_physics_controller = character_physics_controller(self, speed, jump_force, gravity, dash_dist, dash_speed)
         self._SIZE = Vector2(0.5, 1) * 0.8
 
         TILE_SIZE = self.GAME.level.TILE_SIZE
@@ -77,19 +82,15 @@ class Tilemap:
     def MAP(self) -> list[list[bool]]:
         return self.__MAP
     
-    def addTile(self, spritePath: str, tile_pos: tuple[int, int]) -> None: #adds tile to the tilemap
-        if(not isinstance(tile_pos, tuple)):
-            raise ValueError("Tile_pos is not a tuple")
-        pos = Vector2(tile_pos) + Vector2(0.5, 0.5)
-        tile = Basic_object(spritePath, pos, self.__GAME)
-        self.SPRITES.add(tile)
-        self.MAP[tile_pos[0]][tile_pos[1]] = True
+    def addTile(self, spritePath: str, tile_pos: pygame.typing.IntPoint) -> None: #adds tile to the tilemap
+        if(not self.MAP[tile_pos[0]][tile_pos[1]]):
+            pos = Vector2(tile_pos) + Vector2(0.5, 0.5)
+            tile = Basic_object(spritePath, pos, self.__GAME)
+            self.SPRITES.add(tile)
+            self.MAP[tile_pos[0]][tile_pos[1]] = True
 
 class Static_collectable(Dynamic_object):
-    def __init__(self, sprite_path: str, pos: Vector2, diff: character_diff, game: Game_manager) -> None:
-        if(not isinstance(diff, character_diff)):
-            raise ValueError("Diff variable is not character_diff")
-
+    def __init__(self, sprite_path: str, pos: pygame.typing.Point, diff: character_diff, game: Game_manager) -> None:
         super().__init__(sprite_path, pos, game)
         self.__DIFF: character_diff = diff
         self.__is_collected: bool = False
@@ -113,12 +114,12 @@ class Static_collectable(Dynamic_object):
             self.__is_collected = True
 
 class Dynamic_collectable(Static_collectable):
-    def __init__(self, sprite_path: str, pos: Vector2, diff: character_diff, speed: float, destination: Vector2, game: Game_manager) -> None:
+    def __init__(self, sprite_path: str, pos: pygame.typing.Point, diff: character_diff, speed: float, destination: pygame.typing.Point, game: Game_manager) -> None:
         super().__init__(sprite_path, pos, diff, game)
         self.__SPEED: float = speed
         self.__START: Vector2 = self.pos.copy()
-        self.__DESTINATION: Vector2 = destination
-        self.__DIR: Vector2 = (destination - self.pos).normalize()
+        self.__DESTINATION: Vector2 = Vector2(destination)
+        self.__DIR: Vector2 = (self.DESTINATION - self.START).normalize()
         self.__to_end: bool = True
 
     @property

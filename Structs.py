@@ -10,7 +10,7 @@ class jump_struct:
 @dataclass
 class dash_struct:
     is_active: bool = False
-    speed: float = 15
+    speed: float = 3
     distance: float = 3
     destination: float = None
     count: int = 0

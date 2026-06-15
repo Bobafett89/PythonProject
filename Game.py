@@ -124,7 +124,7 @@ class Frame:
         return self.__delta_time
     
     def next(self) -> None:
-        self.__delta_time = self.CLOCK.tick() / 1000
+        self.__delta_time = self.CLOCK.tick(1000) / 1000
 
     def render(self) -> None:
         self.SCREEN.fill("#333333")

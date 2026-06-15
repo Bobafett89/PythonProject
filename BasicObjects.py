@@ -6,7 +6,8 @@ from Game import Game_manager
 class Basic_object(pygame.sprite.Sprite):
     def __init__(self, sprite_path: str, pos: pygame.typing.Point, game: Game_manager) -> None:
         super().__init__()
-        self._pos: Vector2 = Vector2(pos)
+        self._tile_pos: Vector2 = Vector2(pos) // 1
+        self._local_pos = Vector2(pos) - self._tile_pos
         self._SIZE: Vector2 = Vector2(1, 1)
         self._GAME: Game_manager = game
 
@@ -19,12 +20,20 @@ class Basic_object(pygame.sprite.Sprite):
             TILE_SIZE = self.GAME.level.TILE_SIZE
             self.image = pygame.transform.scale(img, (TILE_SIZE, TILE_SIZE))
             self.rect = self.image.get_rect()
-            self.rect = self.rect.move_to(center=(pos * TILE_SIZE))
+            self.rect = self.rect.move_to(center=(self.tile_pos * self.GAME.level.TILE_SIZE + self.local_pos * self.GAME.level.TILE_SIZE))
 
     @property
     def pos(self) -> Vector2:
-        return self._pos
+        return self._tile_pos + self._local_pos
     
+    @property
+    def tile_pos(self) -> Vector2:
+        return self._tile_pos
+
+    @property
+    def local_pos(self) -> Vector2:
+        return self._local_pos
+
     @property
     def SIZE(self) -> Vector2:
         return self._SIZE
@@ -32,37 +41,42 @@ class Basic_object(pygame.sprite.Sprite):
     @property
     def GAME(self) -> Game_manager:
         return self._GAME
-
-    def get_local_map(self) -> tuple[tuple[bool, bool, bool], tuple[bool, bool, bool], tuple[bool, bool, bool]]: #returns 3x3 tilemap around the object
-        ground_map = self.GAME.level.GROUND.MAP
-        tile_pos = self.pos // 1
-        grid = [[True, True, True], [True, True, True], [True, True, True]]
-        for i in range(3):
-            if((tile_pos.x != 0 or i != 0) and (tile_pos.x != len(ground_map) - 1 or i != 2)):
-                for j in range(3):
-                    if((tile_pos.y != 0 or j != 0) and (tile_pos.y != len(ground_map[0]) - 1 or j != 2)):
-                        grid[i][j] = ground_map[int(tile_pos.x) - 1 + i][int(tile_pos.y) - 1 + j]
-        return (tuple(grid[0]), tuple(grid[1]), tuple(grid[2]))
     
-    def get_local_pos(self) -> Vector2: #returns position inside a tile
-        pos_in_tile = self.pos.copy()
-        pos_in_tile -= pos_in_tile // 1
-        return pos_in_tile
+    @property
+    def border_offset(self) -> Vector2:
+        return self.SIZE / 2
 
-    def get_border_offset(self) -> Vector2:#returns offset from the center to border
-        border_offset = self.SIZE / 2
-        return border_offset
-
-    def get_border(self) -> tuple[Vector2, Vector2]:#returns positions of the top-left and bottom-right corners of the border 
-        pos_in_tile, border_offset = self.get_local_pos(), self.get_border_offset()
+    @property
+    def local_border(self) -> tuple[Vector2, Vector2]:
+        pos_in_tile, border_offset = self.local_pos, self.border_offset
         top_left = pos_in_tile - border_offset
         bottom_right = pos_in_tile + border_offset
         return (top_left, bottom_right)
     
+    def overlap(self, tile_pos: pygame.typing.IntPoint, local_pos: Vector2, size: Vector2) -> bool:
+        border_offset = size / 2
+        dist = (self.tile_pos - tile_pos) + (self.local_pos - local_pos)
+        return abs(dist.x) <= self.border_offset.x + border_offset.x and abs(dist.y) <= self.border_offset.y + border_offset.y
+    
 class Dynamic_object(Basic_object):
+    def premove(self, offset: pygame.typing.Point) -> tuple[Vector2, Vector2]:
+        offset_integer = Vector2(offset) // 1
+        offset_float = Vector2(offset) - offset_integer
+        tile_pos = self.tile_pos + offset_integer
+        local_pos = self.local_pos + offset_float
+        if(local_pos.x < 0 or 1 <= local_pos.x):
+            dir = 2 * (local_pos.x >= 1) - 1
+            local_pos.x -= dir
+            tile_pos.x += dir
+        if(local_pos.y < 0 or 1 <= local_pos.y):
+            dir = 2 * (local_pos.y >= 1) - 1
+            local_pos.y -= dir
+            tile_pos.y += dir
+        return (tile_pos, Vector2(round(local_pos.x, 5), round(local_pos.y, 5)))
+
     def move(self, offset: pygame.typing.Point) -> None: #moves object by a given offset
-        self._pos += Vector2(offset)
-        self.rect = self.rect.move_to(center=(self.pos * self.GAME.level.TILE_SIZE))
+        self._tile_pos, self._local_pos = self.premove(offset)
+        self.rect = self.rect.move_to(center=(self.tile_pos * self.GAME.level.TILE_SIZE + self.local_pos * self.GAME.level.TILE_SIZE))
 
     def behaviour(self) -> None: #behaviour of an object which is called every frame if it's active
         pass

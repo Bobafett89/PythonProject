@@ -1,8 +1,9 @@
+import os
+import json
 import pygame
 from pygame import Vector2
 from collections.abc import Callable
 from Structs import character_diff
-import json
 
 class Game_manager:
     def __init__(self) -> None:
@@ -32,13 +33,26 @@ class Game_manager:
         self.UI.open_start_menu()
         self.__is_running = True
 
-    def start_level_from_file(self, level_path: str) -> None:
-        level_file = open(level_path)
-        json_str = level_file.read()
-        level_file.close()
-        level_structure = json.loads(json_str)
-        generator = Level.parse_level(level_structure)
-        self.start_level(generator, level_structure["size"])
+    def start_level_from_file(self, level_name: str) -> None:
+        level_name = os.path.join("Levels", level_name)
+        try:
+            level_file = open(level_name)
+        except FileNotFoundError:
+            raise RuntimeError("File doesn't exist")
+        else:
+            json_str = level_file.read()
+            level_file.close()
+            try:
+                level_structure = json.loads(json_str)
+            except json.decoder.JSONDecodeError:
+                raise RuntimeError("Json has wrong formating")
+            else:
+                try:
+                    generator = Level.parse_level(level_structure)
+                except RuntimeError:
+                    raise RuntimeError("Json has wrong structure")
+                else:
+                    self.start_level(generator, level_structure["size"])
             
     def start_level(self, generator: Callable[[Game_manager], None], size_factor: int) -> None:
         self.__level = Level(generator, size_factor, self)

@@ -1,37 +1,62 @@
+import os
+from math import ceil
 import pygame
 from pygame import Vector2
 from Game import Game_manager
-from Objects import character_diff as diff
 from UI import UI_Screen
-
-def test_level(game: Game_manager):
-    level = game.level
-    level.add_character("Assets/Char.png", Vector2(3.5, 6.5), 5)
-    for i in range(6):
-        level.add_ground_tile("Assets/Block.png", (i, 8))
-    for i in range(3):
-        level.add_ground_tile("Assets/Block.png", (0, 5+i))
-    for i in range(6):
-        level.add_ground_tile("Assets/Block.png", (i, 4))
-    level.add_ground_tile("Assets/Block.png", (2, 6))
-    level.add_ground_tile("Assets/Block.png", (7, 8))
-    level.add_hazard_tile("Assets/HazardBlock.png", (2, 5))
-    level.add_hazard_tile("Assets/HazardBlock.png", (5, 7))
-
-    # level.add_static_collectable("Assets/CharBlock.png", Vector2(7.5, 8.5), diff(0, 1, 0, 1))
-    level.add_static_collectable("Assets/CharBlock.png", Vector2(10.5, 8.5), diff(0, 1, 0, 1))
-    level.add_dynamic_collectable("Assets/CharBlock.png", Vector2(12.5, 8.5), diff(1, 0, 1, 0), 5, Vector2(12.5, 0.5))
 
 def close_game(game: Game_manager) -> None:
     game.close_game()
 
-def start_level(game: Game_manager) -> None:
-    game.start_level_from_file("Levels/test_level.json")
+def load_level(level_path: str, game: Game_manager) -> function:
+    def start_level(game: Game_manager):
+        try:
+            game.start_level_from_file(level_path)
+        except RuntimeError:
+            pass
+    return start_level
+
+def level_selection(game: Game_manager) -> UI_Screen:
+    files = os.listdir("Levels")
+    files = list(filter(lambda file: file.endswith(".json"), files))
+    rows = 3
+    cols = 5
+    levels_per_page = cols * (rows -1 )
+    pages_count = max(1, ceil(len(files) / levels_per_page))
+    size = Vector2(10, 10 * 16 / 9)
+    gap = Vector2((100 - size.x * cols) / (cols + 1), (100 - size.y * rows) / (rows + 1))
+    pages: list[UI_Screen] = []
+    for page in range(pages_count):
+        pages.append(UI_Screen(GAME))
+        for level_number in range(min(10, len(files) - page * levels_per_page)):
+            level = level_number + page * levels_per_page
+            row = level_number // cols
+            col = level_number - row * cols
+            pos = gap + Vector2(col * (size.x + gap.x), row * (size.y + gap.y))
+            pages[page].add_button("", pos, size, load_level(files[level], game))
+            pages[page].add_button("", Vector2(50 - size.x / 2, gap.y + (rows - 1) * (size.y + gap.y)), size, switch_to(game.UI.start_menu, game))
+            level_name = files[level].replace(".json", "")
+            pages[page].add_text(level_name, Vector2(pos.x - gap.x / 4, pos.y + size.y), Vector2(size.x + gap.x / 2, gap.y / 2))
+    if(pages_count > 1):
+        for page in range(len(pages)):
+            if(page < len(pages) - 1):
+                pages[page].add_button("", Vector2(gap.x + (cols - 1) * (size.x + gap.x), gap.y + (rows - 1) * (size.y + gap.y)), size, switch_to(pages[page+1], game))
+            if(page > 0):
+                pages[page].add_button("", Vector2(gap.x, gap.y + (rows - 1) * (size.y + gap.y)), size, switch_to(pages[page-1], game))
+    return pages[0]
+
+def open_level_selection(game: Game_manager) -> None:
+    game.UI.switch_ui(level_selection(game))
+
+def switch_to(ui: UI_Screen, game: Game_manager):
+    def change(game: Game_manager):
+        game.UI.switch_ui(ui)
+    return change
 
 pygame.init()
 GAME = Game_manager()
 menu = UI_Screen(GAME)
-menu.add_button("CharBlock.png", Vector2(25, 20), Vector2(50, 20), start_level)
+menu.add_button("CharBlock.png", Vector2(25, 20), Vector2(50, 20), open_level_selection)
 menu.add_button("HazardBlock.png", Vector2(25, 60), Vector2(50, 20), close_game)
 GAME.start(menu)
 

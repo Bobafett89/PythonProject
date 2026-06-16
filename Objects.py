@@ -113,6 +113,15 @@ class Tilemap:
                     collisions.append(tile)
         return collisions
             
+class Finish(Dynamic_object):
+    def __init__(self, sprite_path, pos, game):
+        super().__init__(sprite_path, pos, game)
+
+    def behaviour(self):
+        character = self.GAME.level.PLAYER
+        if(self.overlap(character.tile_pos, character.local_pos, character.SIZE)):
+            self.GAME.close_level()
+
 class Static_collectable(Dynamic_object):
     def __init__(self, sprite_path: str, pos: pygame.typing.Point, diff: character_diff, game: Game_manager) -> None:
         super().__init__(sprite_path, pos, game)

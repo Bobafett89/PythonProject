@@ -133,9 +133,9 @@ class Frame:
         pygame.display.flip()
 
 class Level:
-    from Objects import Tilemap, Character, Static_collectable
+    from Objects import Tilemap, Character, Static_collectable, Finish
     def __init__(self, generator: Callable[[Game_manager], None], size_factor: int, game: Game_manager) -> None:
-        from Objects import Tilemap, Character, Static_collectable
+        from Objects import Tilemap, Character, Static_collectable, Finish
         self.__GAME: Game_manager = game
         self.__SPRITES: pygame.sprite.Group = pygame.sprite.Group()
         self.__GENERATOR: Callable[[Game_manager], None] = generator
@@ -145,6 +145,7 @@ class Level:
         self.__HAZARD: Tilemap = None
         self.__COLLECTABLES: list[type[Static_collectable]] = []
         self.__PLAYER: Character = None
+        self.__FINISH: Finish = None
 
     @property
     def GAME(self) -> Game_manager:
@@ -184,6 +185,12 @@ class Level:
             raise RuntimeError("Player is inaccessible. Character was not added.")
         return self.__PLAYER
     
+    @property
+    def FINISH(self) -> Finish:
+        if(self.__FINISH == None):
+            raise RuntimeError("Finish is inaccessible. Finish was not added.")
+        return self.__FINISH
+
     @property
     def COLLECTABLES(self) -> list[type[Static_collectable]]:
         return self.__COLLECTABLES
@@ -241,10 +248,13 @@ class Level:
             dash = character["dash"]
             ground = level_struct["grnd"]
             hazard = level_struct["hzrd"]
+            finish = level_struct["finish"]
             static_collectables = level_struct["stc_coll"]
             dynamic_collectables = level_struct["dnm_coll"]
 
             level.add_character(character["spr"], Vector2(character["pos"][0], character["pos"][1]), jump["dist"], jump["height"], jump["time"], dash["dist"], dash["time"])
+
+            level.add_finish(finish["spr"], Vector2(finish["pos"][0], finish["pos"][1]))
 
             for tile in ground:
                 for pos in tile["pos"]:
@@ -305,6 +315,12 @@ class Level:
 
         valid_hazard = has_keys(["hzrd"], level_struct, list) and validate_tilemap(level_struct["hzrd"])
 
+        valid_finish = has_keys(["finish"], level_struct, dict)
+        if(valid_finish):
+            valid_spr = has_keys(["spr"], level_struct["finish"], str)
+            valid_pos = has_keys(["pos"], level_struct["finish"], list) and validate_list(level_struct["finish"]["pos"], 2, (int, float))
+            valid_finish = valid_spr and valid_pos
+
         valid_items = has_keys(["stc_coll"], level_struct, list) and has_keys(["dnm_coll"], level_struct, list)
         if(valid_items):
             for item in level_struct["stc_coll"]:
@@ -324,7 +340,7 @@ class Level:
                     valid_items = False
                     break
 
-        if(not (valid_size and valid_char and valid_ground and valid_hazard and valid_items)):
+        if(not (valid_size and valid_char and valid_ground and valid_hazard and valid_finish and valid_items)):
             raise RuntimeError("Not valid structure of a level")
 
         return generator
@@ -347,6 +363,7 @@ class Level:
         hazard_contacts = pygame.sprite.spritecollide(self.PLAYER, self.HAZARD.SPRITES, False)
         if(len(hazard_contacts) > 0):
             self.GAME.reset_level()
+        self.FINISH.behaviour()
 
     def add_ground_tile(self, sprite_path: str, tile_pos: tuple[int, int]) -> None:
         self.GROUND.addTile(sprite_path, tile_pos)
@@ -360,6 +377,13 @@ class Level:
             raise RuntimeError("More than one character can't be spawned")
         self.__PLAYER = Character(sprite_path, pos, jump_dist, jump_height, jump_time, dash_dist, dash_time, self.GAME)
         self.SPRITES.add(self.PLAYER)
+
+    def add_finish(self, sprite_path: str, pos: Vector2):
+        from Objects import Finish
+        if(self.__FINISH != None):
+            raise RuntimeError("More than one finish can't be added")
+        self.__FINISH = Finish(sprite_path, pos, self.GAME)
+        self.SPRITES.add(self.FINISH)
 
     def add_static_collectable(self, sprite_path: str, pos: Vector2, diff: character_diff) -> None:
         from Objects import Static_collectable

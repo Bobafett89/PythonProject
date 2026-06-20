@@ -38,39 +38,6 @@ class UI_Screen:
             if(pressed):
                 break   
 
-class Text(pygame.sprite.Sprite):
-    from Game import Game_manager
-    def __init__(self, text: str, pos: Vector2, size: Vector2, game: Game_manager):
-        super().__init__()
-        self.__GAME = game
-        unit = self.GAME.FRAME.SCREEN.get_size()
-        unit = ((unit[0] - 1) / 100, (unit[1] - 1) / 100)
-        font = pygame.font.Font(size=self.get_max_point_size(text, Vector2(size.x * unit[0], size.y * unit[1])))
-        img = font.render(text, True, "white")
-        self.image = img
-        self.rect = self.image.get_rect()
-        self.rect = self.rect.move_to(center=((pos.x + size.x / 2) * unit[0], ((pos.y + size.y / 2) * unit[1])))
-
-    @property
-    def GAME(self) -> Game_manager:
-        return self.__GAME
-    
-    @staticmethod
-    def get_max_point_size(text: str, size: Vector2):
-        point_size = 1
-        font = pygame.font.Font(size=point_size)
-        fit = True
-        while fit:
-            fit = False
-            text_size = font.render(text, True, "White").size
-            if(text_size[0] < size.x and text_size[1] < size.y):
-                point_size += 1
-                font.set_point_size(point_size)
-                fit = True
-        return point_size
-
-
-
 class Basic_UI(pygame.sprite.Sprite):
     from Game import Game_manager
     def __init__(self, sprite_path: str, pos: Vector2, size: Vector2, game: Game_manager) -> None:
@@ -79,18 +46,18 @@ class Basic_UI(pygame.sprite.Sprite):
         self._SIZE: Vector2 = size
         self._POS: Vector2 = pos
         self._GAME: Game_manager = game
+        self.unit: Vector2 = Vector2(self.GAME.FRAME.SCREEN.get_size())
+        self.unit: Vector2 = Vector2((self.unit.x - 1) / 100, (self.unit.y - 1) / 100)
 
-        unit = self.GAME.FRAME.SCREEN.get_size()
-        unit = ((unit[0] - 1) / 100, (unit[1] - 1) / 100)
         try:
             img = pygame.image.load(os.path.join("Assets", sprite_path))
         except:
             img = pygame.Surface(Vector2(0, 0))
             img.fill("black")
         finally:
-            self.image = pygame.transform.scale(img, (self.SIZE.x * unit[0], self.SIZE.y * unit[1]))
+            self.image = pygame.transform.scale(img, (self.SIZE.x * self.unit.x, self.SIZE.y * self.unit.y))
             self.rect = self.image.get_rect()
-            self.rect = self.rect.move_to(center=((self.POS.x + self.SIZE.x / 2) * unit[0], ((self.POS.y + self.SIZE.y / 2) * unit[1])))
+            self.rect = self.rect.move_to(center=((self.POS.x + self.SIZE.x / 2) * self.unit.x, ((self.POS.y + self.SIZE.y / 2) * self.unit.y)))
 
     @property
     def SIZE(self) -> Vector2:
@@ -103,9 +70,31 @@ class Basic_UI(pygame.sprite.Sprite):
     @property
     def GAME(self) -> Game_manager:
         return self._GAME
+
+class Text(Basic_UI):
+    from Game import Game_manager
+    def __init__(self, text: str, pos: Vector2, size: Vector2, game: Game_manager):
+        super().__init__("", pos, size, game)
+        font = pygame.font.Font(size=self.get_max_point_size(text, size))
+        font.align = pygame.FONT_CENTER
+        img = font.render(text, True, "white", wraplength=int(size.x * self.unit.x))
+        self.image = img
+        self.rect = self.image.get_rect()
+        self.rect = self.rect.move_to(center=((pos.x + size.x / 2) * self.unit.x, ((pos.y + size.y / 2) * self.unit.y)))
     
-    def press(self) -> None:
-        pass
+    def get_max_point_size(self, text: str, size: Vector2):
+        pixel_size = Vector2(size.x * self.unit.x, size.y * self.unit.y)
+        point_size = 1
+        fit = True
+        while fit:
+            fit = False
+            font = pygame.font.Font(size=point_size)
+            font.align = pygame.FONT_CENTER
+            text_size = Vector2(font.render(text, True, "White", wraplength=int(pixel_size.x)).size)
+            if(text_size.x < pixel_size.x and text_size.y < pixel_size.y):
+                point_size += 1
+                fit = True
+        return point_size - 1
 
 class Button(Basic_UI):
     from Game import Game_manager
@@ -120,10 +109,8 @@ class Button(Basic_UI):
 
     def press(self) -> bool:
         pressed = False
-        unit = self.GAME.FRAME.SCREEN.get_size()
-        unit = ((unit[0] - 1) / 100, (unit[1] - 1) / 100)
         cursor_pos = pygame.mouse.get_pos()
-        cursor_pos = (cursor_pos[0] / unit[0], cursor_pos[1] / unit[1])
+        cursor_pos = (cursor_pos[0] / self.unit.x, cursor_pos[1] / self.unit.y)
         new_keys = pygame.mouse.get_just_pressed()
         if(new_keys[0] and cursor_pos[0] >= self.POS[0] and cursor_pos[0] <= self.POS[0] + self.SIZE[0] and cursor_pos[1] >= self.POS[1] and cursor_pos[1] <= self.POS[1] + self.SIZE[1]):
             self.CALLBACK(self.GAME)

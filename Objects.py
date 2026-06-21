@@ -4,7 +4,7 @@ from pygame import Vector2
 from Game import Game_manager
 from BasicObjects import Basic_object, Dynamic_object
 from Physics import character_physics_controller
-from Structs import character_diff
+from Utils import character_diff
 
 class Character(Dynamic_object):
     def __init__(self, sprite_path: str, pos: pygame.typing.Point, jump_dist: float, jump_height: float, jump_time: float, dash_dist: float, dash_time: float, game: Game_manager) -> None:

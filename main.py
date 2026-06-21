@@ -8,7 +8,7 @@ from UI import UI_Screen
 def close_game(game: Game_manager) -> None:
     game.close_game()
 
-def load_level(level_path: str, game: Game_manager) -> function:
+def load_level(level_path: str) -> function:
     def start_level(game: Game_manager):
         try:
             game.start_level_from_file(level_path)
@@ -32,11 +32,11 @@ def level_selection(game: Game_manager) -> UI_Screen:
             level = level_number + page * levels_per_page
             row = level_number // cols
             col = level_number - row * cols
-            pos = gap + Vector2(col * (size.x + gap.x), row * (size.y + gap.y))
-            pages[page].add_button("", pos, size, load_level(files[level], game))
+            pos = gap + size / 2 + Vector2(col * (size.x + gap.x), row * (size.y + gap.y))
+            pages[page].add_button("", pos, size, load_level(files[level]))
             pages[page].add_button("", Vector2(50 - size.x / 2, gap.y + (rows - 1) * (size.y + gap.y)), size, switch_to(game.UI.start_menu, game))
             level_name = files[level].replace(".json", "")
-            pages[page].add_text(level_name, Vector2(pos.x - gap.x / 4, pos.y + size.y), Vector2(size.x + gap.x / 2, gap.y / 2))
+            pages[page].add_text(level_name, Vector2(pos.x, pos.y + size.y / 2 + gap.y / 4), Vector2(size.x + gap.x / 2, gap.y / 2))
     if(pages_count > 1):
         for page in range(len(pages)):
             if(page < len(pages) - 1):
@@ -56,8 +56,8 @@ def switch_to(ui: UI_Screen, game: Game_manager):
 pygame.init()
 GAME = Game_manager()
 menu = UI_Screen(GAME)
-menu.add_button("CharBlock.png", Vector2(25, 20), Vector2(50, 20), open_level_selection)
-menu.add_button("HazardBlock.png", Vector2(25, 60), Vector2(50, 20), close_game)
+menu.add_button("CharBlock.png", Vector2(50, 30), Vector2(50, 20), open_level_selection)
+menu.add_button("HazardBlock.png", Vector2(50, 70), Vector2(50, 20), close_game)
 GAME.start(menu)
 
 while GAME.is_running:

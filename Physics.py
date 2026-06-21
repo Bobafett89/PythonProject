@@ -1,6 +1,6 @@
 import pygame
 from pygame import Vector2
-from Structs import jump_struct, dash_struct
+from Utils import jump_struct, dash_struct
 from BasicObjects import Basic_object, Dynamic_object
 
 class character_physics_controller:

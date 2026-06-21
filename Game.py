@@ -3,7 +3,7 @@ import json
 import pygame
 from pygame import Vector2
 from collections.abc import Callable
-from Structs import character_diff
+from Utils import character_diff
 
 class Game_manager:
     def __init__(self) -> None:

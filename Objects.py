@@ -1,30 +1,20 @@
 from math import ceil
 import pygame
 from pygame import Vector2
-from Game import Game_manager
-from BasicObjects import Basic_object, Dynamic_object
-from Physics import character_physics_controller
-from Utils import character_diff
+from BasicObjects import LevelObject
+from Utils import character_diff, level_pos, in_right_interval
 
-class Character(Dynamic_object):
-    def __init__(self, sprite_path: str, pos: pygame.typing.Point, jump_dist: float, jump_height: float, jump_time: float, dash_dist: float, dash_time: float, game: Game_manager) -> None:
+class Character(LevelObject):
+    from Game import Game_manager
+    def __init__(self, sprite_path: str, pos: Vector2, jump_dist: float, jump_height: float, jump_time: float, dash_dist: float, dash_time: float, game: Game_manager) -> None:
+        from Physics import character_physics_controller
         jump_force = 2 * jump_height / jump_time
         gravity = jump_force / jump_time
         speed = jump_dist / (2 * jump_time)
         dash_speed = dash_dist / dash_time
 
-        super().__init__(sprite_path, pos, game)
-        self.__PHYSICS: character_physics_controller = character_physics_controller(self, speed, jump_force, gravity, dash_dist, dash_speed)
-        self._SIZE = Vector2(0.5, 1) * 0.8
-
-        TILE_SIZE = self.GAME.level.TILE_SIZE
-        self.image = pygame.transform.scale(self.image, self.SIZE * TILE_SIZE)
-        self.rect = self.image.get_rect()
-        self.rect = self.rect.move_to(center=(pos * TILE_SIZE))
-
-    @property
-    def PHYSICS(self) -> character_physics_controller:
-        return self.__PHYSICS
+        super().__init__(sprite_path, pos, Vector2(0.4, 0.8), game)
+        self.PHYSICS: character_physics_controller = character_physics_controller(self, speed, jump_force, gravity, dash_dist, dash_speed)
     
     def behaviour(self) -> None:
         keys, new_keys = pygame.key.get_pressed(), pygame.key.get_just_pressed()
@@ -40,7 +30,6 @@ class Character(Dynamic_object):
         if(keys[pygame.K_w] and self.PHYSICS.JUMP.on_ground or new_keys[pygame.K_w]):
             self.PHYSICS.jump()
 
-        # self.PHYSICS.VELOCITY.y = 0
         self.__debug()
         self.PHYSICS.collide()
         self.PHYSICS.move()
@@ -69,51 +58,40 @@ class Character(Dynamic_object):
            self.increase_dashes(1)
 
 class Tilemap:
+    from Game import Game_manager
     def __init__(self, game: Game_manager) -> None:
-        self.__GAME: Game_manager = game
-        self.__SPRITES: pygame.sprite.Group = pygame.sprite.Group()
-        self.__MAP: list[list[bool]] = []
-        for i in range(16 * self.__GAME.level.SIZE):
+        from Game import Game_manager
+        self.GAME: Game_manager = game
+        self.SPRITES: pygame.sprite.Group = pygame.sprite.Group()
+        self.MAP: list[list[LevelObject]] = []
+        for i in range(16 * self.GAME.level.SIZE):
             self.MAP.append([])
-            for j in range(9 * self.__GAME.level.SIZE):
+            for j in range(9 * self.GAME.level.SIZE):
                 self.MAP[i].append(None)
-
-    @property
-    def SPRITES(self) -> pygame.sprite.Group:
-        return self.__SPRITES
     
-    @property
-    def MAP(self) -> list[list[bool]]:
-        return self.__MAP
-    
-    def addTile(self, spritePath: str, tile_pos: pygame.typing.IntPoint) -> None: #adds tile to the tilemap
-        if(self.MAP[tile_pos[0]][tile_pos[1]] == None):
-            pos = Vector2(tile_pos) + Vector2(0.5, 0.5)
-            tile = Basic_object(spritePath, pos, self.__GAME)
+    def addTile(self, sprite_path: str, tile_pos: Vector2) -> None: #adds tile to the tilemap
+        if(self.MAP[int(tile_pos.x)][int(tile_pos.y)] == None):
+            tile = LevelObject(sprite_path, level_pos(tile_pos, Vector2(0.5, 0.5)), Vector2(1, 1), self.GAME)
             self.SPRITES.add(tile)
-            self.MAP[tile_pos[0]][tile_pos[1]] = tile
+            self.MAP[int(tile_pos.x)][int(tile_pos.y)] = tile
 
-    def getTile(self, tile_pos: pygame.typing.IntPoint):
-        tile_pos = Vector2(tile_pos)
-        if(0 <= tile_pos.x and tile_pos.x < len(self.MAP) and 0 <= tile_pos.y and tile_pos.y < len(self.MAP[0])):
+    def getTile(self, tile_pos: Vector2) -> LevelObject:
+        if(in_right_interval(tile_pos.x, 0, len(self.MAP)) and in_right_interval(tile_pos.y, 0, len(self.MAP[0]))):
             return self.MAP[int(tile_pos.x)][int(tile_pos.y)]
         else: 
-            return Basic_object("", tile_pos + Vector2(0.5, 0.5), self.__GAME)
+            return LevelObject(None, level_pos(tile_pos, Vector2(0.5, 0.5)), Vector2(1, 1), self.GAME)
 
-    def collides(self, tile_pos: pygame.typing.IntPoint, local_pos: pygame.typing.Point, size: Vector2) -> list[Basic_object]:
-        tile_pos = Vector2(tile_pos)
-        local_pos = Vector2(local_pos)
-        border_offset = size / 2
-        tile_offset = Vector2(ceil(border_offset.x), ceil(border_offset.y))
+    def collides(self, object: type[LevelObject]) -> list[LevelObject]:
+        tile_offset = Vector2(ceil(object.border_offset.x), ceil(object.border_offset.y))
         collisions = []
         for i in range(int(-tile_offset.x), int(tile_offset.x) + 1):
             for j in range(int(-tile_offset.y), int(tile_offset.y) + 1):
-                tile = self.getTile(Vector2(tile_pos.x + i, tile_pos.y + j))
-                if(tile != None and tile.overlap(tile_pos, local_pos, size)):
+                tile = self.getTile(Vector2(object.tile_pos.x + i, object.tile_pos.y + j))
+                if(tile != None and tile.overlap(object)):
                     collisions.append(tile)
         return collisions
             
-class Finish(Dynamic_object):
+class Finish(LevelObject):
     def __init__(self, sprite_path, pos, game):
         super().__init__(sprite_path, pos, game)
 
@@ -122,7 +100,7 @@ class Finish(Dynamic_object):
         if(self.overlap(character.tile_pos, character.local_pos, character.SIZE)):
             self.GAME.close_level()
 
-class Static_collectable(Dynamic_object):
+class Collectable(LevelObject):
     def __init__(self, sprite_path: str, pos: pygame.typing.Point, diff: character_diff, game: Game_manager) -> None:
         super().__init__(sprite_path, pos, game)
         self.__DIFF: character_diff = diff
@@ -146,7 +124,7 @@ class Static_collectable(Dynamic_object):
             self.GAME.level.PLAYER.increase_dashes(self.DIFF.def_dashes)
             self.__is_collected = True
 
-class Dynamic_collectable(Static_collectable):
+class MovingCollectable(LevelObject):
     def __init__(self, sprite_path: str, pos: pygame.typing.Point, diff: character_diff, speed: float, destination: pygame.typing.Point, game: Game_manager) -> None:
         super().__init__(sprite_path, pos, diff, game)
         self.__SPEED: float = speed

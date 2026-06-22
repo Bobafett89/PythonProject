@@ -1,7 +1,7 @@
-import os
-from math import ceil
 import pygame
 from pygame import Vector2
+from os import listdir
+from math import ceil
 from Game import Game_manager
 from UI import UI_Screen
 
@@ -17,7 +17,7 @@ def load_level(level_path: str) -> function:
     return start_level
 
 def level_selection(game: Game_manager) -> UI_Screen:
-    files = os.listdir("Levels")
+    files = listdir("Levels")
     files = list(filter(lambda file: file.endswith(".json"), files))
     rows = 3
     cols = 5

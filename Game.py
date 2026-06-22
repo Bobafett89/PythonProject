@@ -3,7 +3,7 @@ import json
 import pygame
 from pygame import Vector2
 from collections.abc import Callable
-from Utils import character_diff
+from Utils import character_diff, level_pos
 
 class Game_manager:
     def __init__(self) -> None:
@@ -147,68 +147,20 @@ class Frame:
         pygame.display.flip()
 
 class Level:
-    from Objects import Tilemap, Character, Static_collectable, Finish
+    from Objects import Tilemap, Character, Collectable, Finish
     def __init__(self, generator: Callable[[Game_manager], None], size_factor: int, game: Game_manager) -> None:
-        from Objects import Tilemap, Character, Static_collectable, Finish
-        self.__GAME: Game_manager = game
-        self.__SPRITES: pygame.sprite.Group = pygame.sprite.Group()
-        self.__GENERATOR: Callable[[Game_manager], None] = generator
-        self.__SIZE: int = size_factor
-        self.__TILE_SIZE: int = self.GAME.FRAME.SCREEN.get_width() / (16 * self.SIZE)
-        self.__GROUND: Tilemap = None
-        self.__HAZARD: Tilemap = None
-        self.__COLLECTABLES: list[type[Static_collectable]] = []
-        self.__PLAYER: Character = None
-        self.__FINISH: Finish = None
+        from Objects import Tilemap, Character, Collectable, Finish
+        self.GAME: Game_manager = game
+        self.SPRITES: pygame.sprite.Group = pygame.sprite.Group()
+        self.GENERATOR: Callable[[Game_manager], None] = generator
+        self.SIZE: int = size_factor
+        self.TILE_SIZE: int = self.GAME.FRAME.SCREEN.get_width() / (16 * self.SIZE)
+        self.GROUND: Tilemap = None
+        self.HAZARD: Tilemap = None
+        self.COLLECTABLES: list[type[Collectable]] = []
+        self.PLAYER: Character = None
+        self.FINISH: Finish = None
 
-    @property
-    def GAME(self) -> Game_manager:
-        return self.__GAME
-    
-    @property
-    def SPRITES(self) -> pygame.sprite.Group:
-        return self.__SPRITES
-    
-    @property
-    def GENERATOR(self) -> Callable[[Game_manager], None]:
-        return self.__GENERATOR
-    
-    @property
-    def SIZE(self) -> int:
-        return self.__SIZE
-    
-    @property
-    def TILE_SIZE(self) -> int:
-        return self.__TILE_SIZE
-    
-    @property
-    def GROUND(self) -> Tilemap:
-        if(self.__GROUND == None):
-            raise RuntimeError("Ground is inaccessible. The level was not built.")
-        return self.__GROUND
-    
-    @property
-    def HAZARD(self) -> Tilemap:
-        if(self.__GROUND == None):
-            raise RuntimeError("Hazard is inaccessible. The level was not built.")
-        return self.__HAZARD
-    
-    @property
-    def PLAYER(self) -> Character:
-        if(self.__PLAYER == None):
-            raise RuntimeError("Player is inaccessible. Character was not added.")
-        return self.__PLAYER
-    
-    @property
-    def FINISH(self) -> Finish:
-        if(self.__FINISH == None):
-            raise RuntimeError("Finish is inaccessible. Finish was not added.")
-        return self.__FINISH
-
-    @property
-    def COLLECTABLES(self) -> list[type[Static_collectable]]:
-        return self.__COLLECTABLES
-    
     @staticmethod
     def parse_level(level_struct: dict) -> Callable[[Game_manager], None]:
         def has_keys(keys: list[str], where: dict, type: type) -> bool:
@@ -235,7 +187,7 @@ class Level:
                         break
             return valid
             
-        def validate_list(arr, size, type) -> bool:
+        def validate_list(arr: list, size: int, type: type) -> bool:
             valid = False
             if(len(arr) == size or size == 0):
                 valid = True
@@ -245,7 +197,7 @@ class Level:
                         break
             return valid
         
-        def validate_tilemap(tilemap) -> bool:
+        def validate_tilemap(tilemap: list) -> bool:
             valid_tilemap = True
             for tile in tilemap:
                 valid_sprite = has_keys(["spr"], tile, str)
@@ -255,7 +207,7 @@ class Level:
                     break
             return valid_tilemap
 
-        def generator(game: Game_manager):
+        def generator(game: Game_manager) -> None:
             level = game.level
             character = level_struct["char"]
             jump = character["jump"]
@@ -268,7 +220,7 @@ class Level:
 
             level.add_character(character["spr"], Vector2(character["pos"][0], character["pos"][1]), jump["dist"], jump["height"], jump["time"], dash["dist"], dash["time"])
 
-            level.add_finish(finish["spr"], Vector2(finish["pos"][0], finish["pos"][1]))
+            # level.add_finish(finish["spr"], Vector2(finish["pos"][0], finish["pos"][1]))
 
             for tile in ground:
                 for pos in tile["pos"]:
@@ -278,13 +230,13 @@ class Level:
                         if(pos[0][0] == pos[1][0]):
                             dir = start[1] <= end[1] * 2 - 1
                             for i in range(start[1], end[1] + dir, dir):
-                                level.add_ground_tile(tile["spr"], (start[0], i))
+                                level.add_ground_tile(tile["spr"], Vector2(start[0], i))
                         else:
                             dir = start[0] <= end[0] * 2 - 1
                             for i in range(start[0], end[0] + dir, dir):
-                                level.add_ground_tile(tile["spr"], (i, start[1]))
+                                level.add_ground_tile(tile["spr"], Vector2(i, start[1]))
                     else:
-                        level.add_ground_tile(tile["spr"], (pos[0], pos[1]))
+                        level.add_ground_tile(tile["spr"], Vector2(pos[0], pos[1]))
 
             for tile in hazard:
                 for pos in tile["pos"]:
@@ -294,25 +246,25 @@ class Level:
                         if(pos[0][0] == pos[1][0]):
                             dir = start[1] <= end[1] * 2 - 1
                             for i in range(start[1], end[1] + dir, dir):
-                                level.add_hazard_tile(tile["spr"], (start[0], i))
+                                level.add_hazard_tile(tile["spr"], Vector2(start[0], i))
                         else:
                             dir = start[0] <= end[0] * 2 - 1
                             for i in range(start[0], end[0] + dir, dir):
-                                level.add_hazard_tile(tile["spr"], (i, start[1]))
+                                level.add_hazard_tile(tile["spr"], Vector2(i, start[1]))
                     else:
-                        level.add_hazard_tile(tile["spr"], (pos[0], pos[1]))
+                        level.add_hazard_tile(tile["spr"], Vector2(pos[0], pos[1]))
 
-            for item in static_collectables:
-                for pos in item["pos"]:
-                    diff = character_diff(item["diff"][0], item["diff"][1], item["diff"][2], item["diff"][3])
-                    level.add_static_collectable(item["spr"], Vector2(pos[0], pos[1]), diff)
+            # for item in static_collectables:
+            #     for pos in item["pos"]:
+            #         diff = character_diff(item["diff"][0], item["diff"][1], item["diff"][2], item["diff"][3])
+            #         level.add_static_collectable(item["spr"], Vector2(pos[0], pos[1]), diff)
 
-            for item in dynamic_collectables:
-                for i in range(len(item["pos"])):
-                    pos = item["pos"][i]
-                    dest = item["dest"][i]
-                    diff = character_diff(item["diff"][0], item["diff"][1], item["diff"][2], item["diff"][3])
-                    level.add_dynamic_collectable(item["spr"], Vector2(pos[0], pos[1]), diff, item["speed"], Vector2(dest[0], dest[1]))
+            # for item in dynamic_collectables:
+            #     for i in range(len(item["pos"])):
+            #         pos = item["pos"][i]
+            #         dest = item["dest"][i]
+            #         diff = character_diff(item["diff"][0], item["diff"][1], item["diff"][2], item["diff"][3])
+            #         level.add_dynamic_collectable(item["spr"], Vector2(pos[0], pos[1]), diff, item["speed"], Vector2(dest[0], dest[1]))
         
         valid_size = has_keys(["size"], level_struct, int)
 
@@ -361,52 +313,52 @@ class Level:
 
     def build_level(self) -> None:
         from Objects import Tilemap
-        if(self.__GROUND != None):
+        if(self.GROUND != None):
             raise RuntimeError("The level was already built.")
-        self.__GROUND = Tilemap(self.GAME)
-        self.__HAZARD = Tilemap(self.GAME)
+        self.GROUND = Tilemap(self.GAME)
+        self.HAZARD = Tilemap(self.GAME)
         self.GENERATOR(self.GAME)
 
     def logic(self) -> None: #behaviour of a level
         self.PLAYER.behaviour()
-        for collectable in self.COLLECTABLES:
-            collectable.behaviour()
-            if(collectable.is_collected):
-                self.SPRITES.remove(collectable)
-                self.COLLECTABLES.remove(collectable)
-        hazard_contacts = pygame.sprite.spritecollide(self.PLAYER, self.HAZARD.SPRITES, False)
-        if(len(hazard_contacts) > 0):
-            self.GAME.reset_level()
-        self.FINISH.behaviour()
+        # for collectable in self.COLLECTABLES:
+        #     collectable.behaviour()
+        #     if(collectable.is_collected):
+        #         self.SPRITES.remove(collectable)
+        #         self.COLLECTABLES.remove(collectable)
+        # hazard_contacts = pygame.sprite.spritecollide(self.PLAYER, self.HAZARD.SPRITES, False)
+        # if(len(hazard_contacts) > 0):
+        #     self.GAME.reset_level()
+        # self.FINISH.behaviour()
 
-    def add_ground_tile(self, sprite_path: str, tile_pos: tuple[int, int]) -> None:
+    def add_ground_tile(self, sprite_path: str, tile_pos: Vector2) -> None:
         self.GROUND.addTile(sprite_path, tile_pos)
         
-    def add_hazard_tile(self, sprite_path: str, tile_pos: tuple[int, int]) -> None:
+    def add_hazard_tile(self, sprite_path: str, tile_pos: Vector2) -> None:
         self.HAZARD.addTile(sprite_path, tile_pos)
 
     def add_character(self, sprite_path: str, pos: Vector2, jump_dist: float, jump_height: float, jump_time: float, dash_dist: float, dash_time: float) -> None:
         from Objects import Character
-        if(self.__PLAYER != None):
+        if(self.PLAYER != None):
             raise RuntimeError("More than one character can't be spawned")
-        self.__PLAYER = Character(sprite_path, pos, jump_dist, jump_height, jump_time, dash_dist, dash_time, self.GAME)
+        self.PLAYER = Character(sprite_path, level_pos.from_vector2(pos), jump_dist, jump_height, jump_time, dash_dist, dash_time, self.GAME)
         self.SPRITES.add(self.PLAYER)
 
     def add_finish(self, sprite_path: str, pos: Vector2):
         from Objects import Finish
-        if(self.__FINISH != None):
+        if(self.FINISH != None):
             raise RuntimeError("More than one finish can't be added")
-        self.__FINISH = Finish(sprite_path, pos, self.GAME)
+        self.FINISH = Finish(sprite_path, pos, self.GAME)
         self.SPRITES.add(self.FINISH)
 
     def add_static_collectable(self, sprite_path: str, pos: Vector2, diff: character_diff) -> None:
-        from Objects import Static_collectable
-        collectable = Static_collectable(sprite_path, pos, diff, self.GAME)
+        from Objects import Collectable
+        collectable = Collectable(sprite_path, pos, diff, self.GAME)
         self.COLLECTABLES.append(collectable)
         self.SPRITES.add(collectable)
 
     def add_dynamic_collectable(self, sprite_path: str, pos: Vector2, diff: character_diff, speed: float, destination: Vector2) -> None:
-        from Objects import Dynamic_collectable
-        collectable = Dynamic_collectable(sprite_path, pos, diff, speed, destination, self.GAME)
+        from Objects import MovingCollectable
+        collectable = MovingCollectable(sprite_path, pos, diff, speed, destination, self.GAME)
         self.COLLECTABLES.append(collectable)
         self.SPRITES.add(collectable)

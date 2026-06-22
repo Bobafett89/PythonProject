@@ -13,7 +13,7 @@ class dash_struct:
     is_active: bool = False
     speed: float = 3
     distance: float = 3
-    destination: float = None
+    left: float = 0
     count: int = 0
     def_count: int = 0
 
@@ -23,6 +23,47 @@ class character_diff:
     def_air_jumps: int = 0
     dashes: int = 0
     def_dashes: int = 0
+
+@dataclass
+class level_pos:
+    tile_pos: Vector2 = None
+    local_pos: Vector2 = None
+
+    def __add__(self, other: level_pos) -> level_pos:
+        new_tile = self.tile_pos + other.tile_pos
+        new_local = self.local_pos + other.local_pos
+        return level_pos.correct(level_pos(new_tile, new_local))
+    
+    def __sub__(self, other: level_pos) -> level_pos:
+        new_tile = self.tile_pos - other.tile_pos
+        new_local = self.local_pos - other.local_pos
+        return level_pos.correct(level_pos(new_tile, new_local))
+    
+    def to_vector2(self) -> Vector2:
+        return self.tile_pos + self.local_pos
+    
+    def vector2_to(self, other: level_pos) -> Vector2:
+        return (other - self).to_vector2()
+
+    @staticmethod
+    def correct(pos: level_pos) -> level_pos:
+        new_tile = pos.tile_pos.copy()
+        new_local = pos.local_pos.copy()
+        if(not in_right_interval(new_local.x, 0, 1)):
+            dir = direction(new_local.x < 0)
+            new_tile.x -= dir
+            new_local.x += dir
+        if(not in_right_interval(new_local.y, 0, 1)):
+            dir = direction(new_local.y < 0)
+            new_tile.y -= dir
+            new_local.y += dir
+        return level_pos(new_tile, new_local)
+
+    @staticmethod
+    def from_vector2(pos: Vector2):
+        tile_pos = pos // 1
+        local_pos = pos - tile_pos
+        return level_pos(tile_pos, local_pos)
 
 def direction(statement: bool) -> int:
     return 2 * statement - 1

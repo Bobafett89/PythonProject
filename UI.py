@@ -35,7 +35,7 @@ class Text(BasicSprite):
         font.align = pygame.FONT_CENTER
         img = font.render(text, True, "white", wraplength=int(max_size.x * self.unit.x))
         text_size = vector2_div(Vector2(img.size), self.unit)
-        self.rescale(text_size)
+        self.set_size(text_size)
         self.set_image(img)
     
     def get_max_point_size(self, text: str, max_size: Vector2) -> int:
@@ -47,7 +47,7 @@ class Text(BasicSprite):
             font = pygame.font.Font(size=point_size)
             font.align = pygame.FONT_CENTER
             text_size = Vector2(font.render(text, True, "White", wraplength=int(pixel_size.x)).size)
-            if(text_size.x < pixel_size.x and text_size.y < pixel_size.y):
+            if(text_size.x <= pixel_size.x and text_size.y <= pixel_size.y):
                 point_size += 1
                 fit = True
         return point_size - 1

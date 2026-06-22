@@ -18,7 +18,7 @@
                                             [[0, 4], [5, 4]],
                                             [2, 6], [7, 8], [[12, 0], [12, 5]]]}
     ],
-    "hzrd": [{"spr": "HazardBlock.png", "pos": []}],
+    "hzrd": [{"spr": "HazardBlock.png", "pos": [[15, 7]]}],
     "finish": {"spr": "", "pos": [15.5, 8.5]},
     "stc_coll": [{"spr": "CharBlock.png", "pos": [[1.5, 1.5]], "diff": [0, 1, 0, 1]}],
     "dnm_coll": [{"spr": "CharBlock.png", "pos": [[1.5, 3.5]], "diff": [1, 0, 1, 0], "speed": 5, "dest": [[5.5, 3.5]]}]

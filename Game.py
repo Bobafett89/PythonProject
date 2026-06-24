@@ -154,7 +154,7 @@ class Level:
         self.SPRITES: pygame.sprite.Group = pygame.sprite.Group()
         self.GENERATOR: Callable[[Game_manager], None] = generator
         self.SIZE: int = size_factor
-        self.TILE_SIZE: int = self.GAME.FRAME.SCREEN.get_width() / (16 * self.SIZE)
+        self.TILE_SIZE: int = self.GAME.FRAME.SCREEN.width / (16 * self.SIZE)
         self.GROUND: Tilemap = None
         self.HAZARD: Tilemap = None
         self.COLLECTABLES: list[type[Collectable]] = []
@@ -220,7 +220,7 @@ class Level:
 
             level.add_character(character["spr"], Vector2(character["pos"][0], character["pos"][1]), jump["dist"], jump["height"], jump["time"], dash["dist"], dash["time"])
 
-            # level.add_finish(finish["spr"], Vector2(finish["pos"][0], finish["pos"][1]))
+            level.add_finish(finish["spr"], Vector2(finish["pos"][0], finish["pos"][1]))
 
             for tile in ground:
                 for pos in tile["pos"]:
@@ -254,17 +254,17 @@ class Level:
                     else:
                         level.add_hazard_tile(tile["spr"], Vector2(pos[0], pos[1]))
 
-            # for item in static_collectables:
-            #     for pos in item["pos"]:
-            #         diff = character_diff(item["diff"][0], item["diff"][1], item["diff"][2], item["diff"][3])
-            #         level.add_static_collectable(item["spr"], Vector2(pos[0], pos[1]), diff)
+            for item in static_collectables:
+                for pos in item["pos"]:
+                    diff = character_diff(item["diff"][0], item["diff"][1], item["diff"][2], item["diff"][3])
+                    level.add_static_collectable(item["spr"], Vector2(pos[0], pos[1]), diff)
 
-            # for item in dynamic_collectables:
-            #     for i in range(len(item["pos"])):
-            #         pos = item["pos"][i]
-            #         dest = item["dest"][i]
-            #         diff = character_diff(item["diff"][0], item["diff"][1], item["diff"][2], item["diff"][3])
-            #         level.add_dynamic_collectable(item["spr"], Vector2(pos[0], pos[1]), diff, item["speed"], Vector2(dest[0], dest[1]))
+            for item in dynamic_collectables:
+                for i in range(len(item["pos"])):
+                    pos = item["pos"][i]
+                    dest = item["dest"][i]
+                    diff = character_diff(item["diff"][0], item["diff"][1], item["diff"][2], item["diff"][3])
+                    level.add_dynamic_collectable(item["spr"], Vector2(pos[0], pos[1]), diff, item["speed"], Vector2(dest[0], dest[1]))
         
         valid_size = has_keys(["size"], level_struct, int)
 
@@ -321,15 +321,15 @@ class Level:
 
     def logic(self) -> None: #behaviour of a level
         self.PLAYER.behaviour()
-        # for collectable in self.COLLECTABLES:
-        #     collectable.behaviour()
-        #     if(collectable.is_collected):
-        #         self.SPRITES.remove(collectable)
-        #         self.COLLECTABLES.remove(collectable)
-        # hazard_contacts = pygame.sprite.spritecollide(self.PLAYER, self.HAZARD.SPRITES, False)
-        # if(len(hazard_contacts) > 0):
-        #     self.GAME.reset_level()
-        # self.FINISH.behaviour()
+        for collectable in self.COLLECTABLES:
+            collectable.behaviour()
+            if(collectable.is_collected):
+                self.SPRITES.remove(collectable)
+                self.COLLECTABLES.remove(collectable)
+        hazard_contacts = self.HAZARD.collides(self.PLAYER, False)
+        if(len(hazard_contacts) > 0):
+            self.GAME.reset_level()
+        self.FINISH.behaviour()
 
     def add_ground_tile(self, sprite_path: str, tile_pos: Vector2) -> None:
         self.GROUND.addTile(sprite_path, tile_pos)
@@ -348,17 +348,17 @@ class Level:
         from Objects import Finish
         if(self.FINISH != None):
             raise RuntimeError("More than one finish can't be added")
-        self.FINISH = Finish(sprite_path, pos, self.GAME)
+        self.FINISH = Finish(sprite_path, level_pos.from_vector2(pos), self.GAME)
         self.SPRITES.add(self.FINISH)
 
     def add_static_collectable(self, sprite_path: str, pos: Vector2, diff: character_diff) -> None:
         from Objects import Collectable
-        collectable = Collectable(sprite_path, pos, diff, self.GAME)
+        collectable = Collectable(sprite_path, level_pos.from_vector2(pos), diff, self.GAME)
         self.COLLECTABLES.append(collectable)
         self.SPRITES.add(collectable)
 
     def add_dynamic_collectable(self, sprite_path: str, pos: Vector2, diff: character_diff, speed: float, destination: Vector2) -> None:
         from Objects import MovingCollectable
-        collectable = MovingCollectable(sprite_path, pos, diff, speed, destination, self.GAME)
+        collectable = MovingCollectable(sprite_path, level_pos.from_vector2(pos), diff, speed, level_pos.from_vector2(destination), self.GAME)
         self.COLLECTABLES.append(collectable)
         self.SPRITES.add(collectable)

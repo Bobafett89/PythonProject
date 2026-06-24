@@ -47,7 +47,7 @@ class character_physics_controller:
             if(self.VELOCITY.y != 0):
                 self.JUMP.on_ground = False
             new_state = next_state()
-            tiles = self.GAME.level.GROUND.collides(new_state)
+            tiles = self.GAME.level.GROUND.collides(new_state, True)
             tiles.sort(key=(lambda tile: self.CHAR.level_pos.vector2_to(tile.level_pos).length()))
             for tile in tiles:
                 rel_topleft = (new_state.topleft_border - tile.topleft_border).to_vector2()
@@ -110,4 +110,4 @@ class character_physics_controller:
                 self.dir = -1
             self.CHAR.move_by(level_pos.from_vector2(self.step))
             if(self.DASH.is_active):
-                self.DASH.left -= self.step.x
+                self.DASH.left -= abs(self.step.x)

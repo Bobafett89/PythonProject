@@ -44,6 +44,11 @@ class level_pos:
     
     def vector2_to(self, other: level_pos) -> Vector2:
         return (other - self).to_vector2()
+    
+    def copy(self) -> level_pos:
+        new_tile = self.tile_pos.copy()
+        new_local = self.local_pos.copy()
+        return level_pos(new_tile, new_local)
 
     @staticmethod
     def correct(pos: level_pos) -> level_pos:

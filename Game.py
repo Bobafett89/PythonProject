@@ -1,40 +1,48 @@
-import os
-import json
 import pygame
 from pygame import Vector2
+from Utils import character_diff, level_pos, Control, Command
+from os import path
+from json import loads, decoder
 from collections.abc import Callable
-from Utils import character_diff, level_pos
 
 class Game_manager:
     def __init__(self) -> None:
-        self.__is_running: bool = False
-        self.__FRAME: Frame = Frame()
-        self.__UI = UI(self)
-        self.__level: Level = None
+        self.is_running: bool = False
+        self.FRAME: Frame = Frame()
+        self.UI = UI(self)
+        self.level: Level = None
+        self.control: Control = Control.wait()
 
-    @property
-    def FRAME(self) -> Frame:
-        return self.__FRAME
-    
-    @property
-    def UI(self) -> UI:
-        return self.__UI
-
-    @property
-    def level(self) -> Level:
-        return self.__level
-    
-    @property
-    def is_running(self) -> bool:
-        return self.__is_running
-    
     def start(self, start_menu: UIScreen) -> None:
         self.UI.set_start_menu(start_menu)
         self.UI.open_start_menu()
-        self.__is_running = True
+        self.is_running = True
 
-    def start_level_from_file(self, level_name: str) -> None:
-        level_name = os.path.join("Levels", level_name)
+    def set_command(self, command: Control) -> None:
+        if(command.command.value > self.control.command.value):
+            self.control = command
+
+    def execute_command(self):
+        match self.control.command:
+            case Command.WAIT:
+                pass
+            case Command.SWITCH_UI:
+                self.UI.switch_ui(self.control.parameter)
+            case Command.OPEN_LEVEL:
+                try:
+                    self._start_level_from_file(self.control.parameter)
+                except RuntimeError:
+                    pass
+            case Command.RESTART_LEVEL:
+                self._reset_level()
+            case Command.CLOSE_LEVEL:
+                self._close_level()
+            case Command.CLOSE_GAME:
+                self._close_game()
+        self.control = Control.wait()
+
+    def _start_level_from_file(self, level_name: str) -> None:
+        level_name = path.join("Levels", level_name)
         try:
             level_file = open(level_name)
         except FileNotFoundError:
@@ -43,8 +51,8 @@ class Game_manager:
             json_str = level_file.read()
             level_file.close()
             try:
-                level_structure = json.loads(json_str)
-            except json.decoder.JSONDecodeError:
+                level_structure = loads(json_str)
+            except decoder.JSONDecodeError:
                 raise RuntimeError("Json has wrong formating")
             else:
                 try:
@@ -52,10 +60,10 @@ class Game_manager:
                 except RuntimeError:
                     raise RuntimeError("Json has wrong structure")
                 else:
-                    self.start_level(generator, level_structure["size"])
+                    self._start_level(generator, level_structure["size"])
             
-    def start_level(self, generator: Callable[[Game_manager], None], size_factor: int) -> None:
-        self.__level = Level(generator, size_factor, self)
+    def _start_level(self, generator: Callable[[Game_manager], None], size_factor: int) -> None:
+        self.level = Level(generator, size_factor, self)
         self.level.build_level()
         self.UI.clear_ui()
         self.FRAME.RENDER_GROUPS.clear()
@@ -63,82 +71,54 @@ class Game_manager:
         self.FRAME.RENDER_GROUPS.append(self.level.GROUND.SPRITES)
         self.FRAME.RENDER_GROUPS.append(self.level.HAZARD.SPRITES)
 
-    def close_level(self) -> None:
-        self.__level = None
+    def _close_level(self) -> None:
+        self.level = None
         self.FRAME.RENDER_GROUPS.clear()
         self.UI.open_start_menu()
 
-    def reset_level(self) -> None:
+    def _reset_level(self) -> None:
         level = self.level
-        self.start_level(level.GENERATOR, level.SIZE)
+        self._start_level(level.GENERATOR, level.SIZE)
 
-    def close_game(self) -> None:
-        self.__is_running = False
+    def _close_game(self) -> None:
+        self.is_running = False
 
 class UI:
     from UI import UI_Screen
     def __init__(self, game: Game_manager) -> None:
         from UI import UI_Screen
-        self.__start_menu: UI_Screen = None
-        self.__ui: UI_Screen = None
-        self.__GAME: Game_manager = game
+        self.start_menu: UI_Screen = None
+        self.current_screen: UI_Screen = None
+        self.GAME: Game_manager = game
 
-    @property
-    def start_menu(self) -> UI_Screen:
-        return self.__start_menu
-    
-    @property
-    def ui(self) -> UI_Screen:
-        return self.__ui
-    
-    @property
-    def GAME(self) -> Game_manager:
-        return self.__GAME
-    
     def set_start_menu(self, start_menu: UI_Screen) -> None:
-        self.__start_menu = start_menu
+        self.start_menu = start_menu
 
     def open_start_menu(self) -> None:
         self.switch_ui(self.start_menu)
 
-    def switch_ui(self, ui: UI_Screen) -> None:
+    def switch_ui(self, screen: UI_Screen) -> None:
         self.clear_ui()
-        self.__ui = ui
-        self.GAME.FRAME.RENDER_GROUPS.append(self.ui.SPRITES)
+        self.current_screen = screen
+        self.GAME.FRAME.RENDER_GROUPS.append(self.current_screen.SPRITES)
 
     def clear_ui(self) -> None:
-        if(self.ui != None and self.ui.SPRITES in self.GAME.FRAME.RENDER_GROUPS):
-            self.GAME.FRAME.RENDER_GROUPS.remove(self.ui.SPRITES)
-        self.__ui = None
+        if(self.current_screen != None and self.current_screen.SPRITES in self.GAME.FRAME.RENDER_GROUPS):
+            self.GAME.FRAME.RENDER_GROUPS.remove(self.current_screen.SPRITES)
+        self.current_screen = None
 
     def press_buttons(self) -> None:
-        self.ui.press_buttons()
+        self.current_screen.press_buttons()
 
 class Frame:
     def __init__(self) -> None:
-        self.__SCREEN: pygame.Surface = pygame.display.set_mode()
-        self.__CLOCK: pygame.Clock = pygame.time.Clock()
-        self.__RENDER_GROUPS: list[pygame.sprite.Group] = []
-        self.__delta_time: float = 0
+        self.SCREEN: pygame.Surface = pygame.display.set_mode()
+        self.CLOCK: pygame.Clock = pygame.time.Clock()
+        self.RENDER_GROUPS: list[pygame.sprite.Group] = []
+        self.delta_time: float = 0
 
-    @property
-    def SCREEN(self) -> pygame.Surface:
-        return self.__SCREEN
-    
-    @property
-    def CLOCK(self) -> pygame.time.Clock:
-        return self.__CLOCK
-    
-    @property
-    def RENDER_GROUPS(self) -> list[pygame.sprite.Group]:
-        return self.__RENDER_GROUPS
-    
-    @property
-    def delta_time(self) -> float:
-        return self.__delta_time
-    
     def next(self) -> None:
-        self.__delta_time = self.CLOCK.tick(1000) / 1000
+        self.delta_time = self.CLOCK.tick(1000) / 1000
 
     def render(self) -> None:
         self.SCREEN.fill("#333333")
@@ -319,7 +299,7 @@ class Level:
         self.HAZARD = Tilemap(self.GAME)
         self.GENERATOR(self.GAME)
 
-    def logic(self) -> None: #behaviour of a level
+    def logic(self) -> None:
         self.PLAYER.behaviour()
         for collectable in self.COLLECTABLES:
             collectable.behaviour()
@@ -328,7 +308,7 @@ class Level:
                 self.COLLECTABLES.remove(collectable)
         hazard_contacts = self.HAZARD.collides(self.PLAYER, False)
         if(len(hazard_contacts) > 0):
-            self.GAME.reset_level()
+            self.GAME.set_command(Control.restart_level())
         self.FINISH.behaviour()
 
     def add_ground_tile(self, sprite_path: str, tile_pos: Vector2) -> None:

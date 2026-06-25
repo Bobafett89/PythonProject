@@ -1,8 +1,8 @@
 import pygame
 from pygame import Vector2
-from collections.abc import Callable
 from BasicObjects import BasicSprite
 from Utils import in_interval, vector2_div, vector2_mult
+from collections.abc import Callable
 
 class UI_Screen:
     from Game import Game_manager
@@ -50,7 +50,9 @@ class Text(BasicSprite):
             if(text_size.x <= pixel_size.x and text_size.y <= pixel_size.y):
                 point_size += 1
                 fit = True
-        return point_size - 1
+            else:
+                point_size -= 1
+        return point_size
 
 class Button(BasicSprite):
     from Game import Game_manager

@@ -1,4 +1,3 @@
-import pygame
 from pygame import Vector2
 from Utils import jump_struct, dash_struct, level_pos, direction
 
@@ -25,9 +24,9 @@ class character_physics_controller:
 
         @property
         def step(self) -> Vector2:
-            return self.VELOCITY *  self.delta_time
+            return self.VELOCITY * self.delta_time
 
-        def collide(self):
+        def collide(self) -> None:
             from BasicObjects import LevelObject
             def hit_floor() -> None:
                 if(self.VELOCITY.y > 0):
@@ -80,7 +79,6 @@ class character_physics_controller:
 
         def dash(self) -> None:
             dash = self.DASH
-            pos = self.CHAR.level_pos
             if(not dash.is_active and dash.count > 0):
                 dash.is_active = True
                 dash.left = dash.distance
@@ -104,10 +102,8 @@ class character_physics_controller:
                         self.JUMP.air_jumps -= 1
 
         def move(self) -> None:
-            if(self.VELOCITY.x > 0):
-                self.dir = 1
-            elif(self.VELOCITY.x < 0):
-                self.dir = -1
+            if(self.VELOCITY.x != 0):
+                self.dir = direction(self.VELOCITY.x > 0)
             self.CHAR.move_by(level_pos.from_vector2(self.step))
             if(self.DASH.is_active):
                 self.DASH.left -= abs(self.step.x)

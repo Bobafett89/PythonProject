@@ -1,19 +1,22 @@
 import pygame
 from pygame import Vector2
-from os import listdir
-from math import ceil
+from Utils import Control
 from Game import Game_manager
 from UI import UI_Screen
+from os import listdir
+from math import ceil
 
 def close_game(game: Game_manager) -> None:
-    game.close_game()
+    game.set_command(Control.close_game())
+
+def switch_to(screen: UI_Screen, game: Game_manager) -> function:
+    def change(game: Game_manager):
+        game.set_command(Control.switch_ui(screen))
+    return change
 
 def load_level(level_path: str) -> function:
     def start_level(game: Game_manager):
-        try:
-            game.start_level_from_file(level_path)
-        except RuntimeError:
-            pass
+        game.set_command(Control.open_level(level_path))
     return start_level
 
 def level_selection(game: Game_manager) -> UI_Screen:
@@ -46,12 +49,7 @@ def level_selection(game: Game_manager) -> UI_Screen:
     return pages[0]
 
 def open_level_selection(game: Game_manager) -> None:
-    game.UI.switch_ui(level_selection(game))
-
-def switch_to(ui: UI_Screen, game: Game_manager):
-    def change(game: Game_manager):
-        game.UI.switch_ui(ui)
-    return change
+    game.set_command(Control.switch_ui(level_selection(game)))
 
 pygame.init()
 GAME = Game_manager()
@@ -63,18 +61,19 @@ GAME.start(menu)
 while GAME.is_running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
-            GAME.close_game()
+            GAME.set_command(Control.close_game())
         if event.type == pygame.KEYDOWN:
             keys = pygame.key.get_pressed()
             if(keys[pygame.K_ESCAPE]):
-                GAME.close_level()
+                GAME.set_command(Control.close_level())
             if(keys[pygame.K_END]):
-                GAME.close_game()
+                GAME.set_command(Control.close_game())
 
-    if(GAME.UI.ui != None):
+    if(GAME.UI.current_screen != None):
         GAME.UI.press_buttons()
     if(GAME.level != None):
         GAME.level.logic()
+    GAME.execute_command()
     GAME.FRAME.render()
     GAME.FRAME.next()
 

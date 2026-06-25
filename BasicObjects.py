@@ -1,11 +1,11 @@
 import pygame
 from pygame import Vector2
+from Utils import vector2_mult, vector2_div, level_pos
 from os import path
-from Utils import vector2_add_num, vector2_mult, vector2_div, level_pos
 
 class BasicSprite(pygame.sprite.Sprite):
     from Game import Game_manager
-    def __init__(self, sprite_path: str | None, screen_pos: Vector2, screen_size: Vector2, game: Game_manager):
+    def __init__(self, sprite_path: str | None, screen_pos: Vector2, screen_size: Vector2, game: Game_manager) -> None:
         from Game import Game_manager
         super().__init__()
         self.GAME: Game_manager = game
@@ -111,8 +111,8 @@ class LevelObject(BasicSprite):
         return vector2_div(self.level_size * self.TILE_SIZE, self.unit)
 
     def move_to(self, new_pos: level_pos) -> None:
-        digits = 5
-        new_pos.local_pos = Vector2(round(new_pos.local_pos.x, digits), round(new_pos.local_pos.y, digits))
+        precision = 5
+        new_pos.local_pos = Vector2(round(new_pos.local_pos.x, precision), round(new_pos.local_pos.y, precision))
         self.level_pos = new_pos
         super().move_to(self.calc_screen_pos())
     

@@ -1,20 +1,20 @@
-from math import ceil
 import pygame
 from pygame import Vector2
 from BasicObjects import LevelObject
-from Utils import character_diff, level_pos, in_right_interval, direction
+from Utils import character_diff, level_pos, Control, in_right_interval, direction
+from math import ceil
 
 class Character(LevelObject):
     from Game import Game_manager
     def __init__(self, sprite_path: str, pos: Vector2, jump_dist: float, jump_height: float, jump_time: float, dash_dist: float, dash_time: float, game: Game_manager) -> None:
-        from Physics import character_physics_controller
+        from Physics import character_physics_controller as physics
         jump_force = 2 * jump_height / jump_time
         gravity = jump_force / jump_time
         speed = jump_dist / (2 * jump_time)
         dash_speed = dash_dist / dash_time
 
         super().__init__(sprite_path, pos, Vector2(0.4, 0.8), game)
-        self.PHYSICS: character_physics_controller = character_physics_controller(self, speed, jump_force, gravity, dash_dist, dash_speed)
+        self.PHYSICS: physics = physics(self, speed, jump_force, gravity, dash_dist, dash_speed)
     
     def behaviour(self) -> None:
         keys, new_keys = pygame.key.get_pressed(), pygame.key.get_just_pressed()
@@ -34,19 +34,19 @@ class Character(LevelObject):
         self.PHYSICS.collide()
         self.PHYSICS.move()
 
-    def give_air_jumps(self, count: int) -> None: #increases current air jumps by a given amount
+    def give_air_jumps(self, count: int) -> None:
         self.PHYSICS.JUMP.air_jumps += count
 
-    def give_dashes(self, count: int) -> None: #increases current dashes by a given amount
+    def give_dashes(self, count: int) -> None:
         self.PHYSICS.DASH.count += count
 
-    def increase_air_jumps(self, count: int) -> None: #increases default amount of air jumps by a given amount
+    def increase_air_jumps(self, count: int) -> None:
         self.PHYSICS.JUMP.def_air_jumps += count
 
-    def increase_dashes(self, count: int) -> None: #increases default amount of dashes by a given amount
+    def increase_dashes(self, count: int) -> None:
         self.PHYSICS.DASH.def_count += count
 
-    def __debug(self) -> None: #function to makes testing easier
+    def __debug(self) -> None:
         keys, new_keys = pygame.key.get_pressed(), pygame.key.get_just_pressed()
         if(keys[pygame.K_UP]):
             self.PHYSICS.VELOCITY.y = -self.PHYSICS.JUMP.force
@@ -69,7 +69,7 @@ class Tilemap:
             for j in range(9 * self.GAME.level.SIZE):
                 self.MAP[i].append(None)
     
-    def addTile(self, sprite_path: str, tile_pos: Vector2) -> None: #adds tile to the tilemap
+    def addTile(self, sprite_path: str, tile_pos: Vector2) -> None:
         if(self.MAP[int(tile_pos.x)][int(tile_pos.y)] == None):
             tile = LevelObject(sprite_path, level_pos(tile_pos, Vector2(0.5, 0.5)), Vector2(1, 1), self.GAME)
             self.SPRITES.add(tile)
@@ -102,7 +102,7 @@ class Finish(LevelObject):
     def behaviour(self) -> None:
         character = self.GAME.level.PLAYER
         if(self.overlap(character)):
-            self.GAME.close_level()
+            self.GAME.set_command(Control.close_level())
 
 class Collectable(LevelObject):
     from Game import Game_manager
@@ -115,10 +115,10 @@ class Collectable(LevelObject):
         character = self.GAME.level.PLAYER
         collide_with_character = self.overlap(character)
         if(collide_with_character and not self.is_collected):
-            self.GAME.level.PLAYER.give_air_jumps(self.DIFF.air_jumps)
-            self.GAME.level.PLAYER.increase_air_jumps(self.DIFF.def_air_jumps)
-            self.GAME.level.PLAYER.give_dashes(self.DIFF.dashes)
-            self.GAME.level.PLAYER.increase_dashes(self.DIFF.def_dashes)
+            character.give_air_jumps(self.DIFF.air_jumps)
+            character.increase_air_jumps(self.DIFF.def_air_jumps)
+            character.give_dashes(self.DIFF.dashes)
+            character.increase_dashes(self.DIFF.def_dashes)
             self.is_collected = True
 
 class MovingCollectable(Collectable):
@@ -140,11 +140,11 @@ class MovingCollectable(Collectable):
         left = self.level_pos.vector2_to(target).length()
         step = self.SPEED * self.GAME.FRAME.delta_time
         offset = self.DIR.copy()
+        offset *= direction(self.to_end)
         if(step < left):
             offset *= step
         else:
             offset *= left
             self.to_end = not self.to_end
-        offset *= direction(self.to_end)
         self.move_by(level_pos.from_vector2(offset))
         super().behaviour()

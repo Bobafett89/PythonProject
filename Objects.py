@@ -19,10 +19,8 @@ class Character(LevelObject):
     def behaviour(self) -> None:
         keys, new_keys = pygame.key.get_pressed(), pygame.key.get_just_pressed()
 
-        if(new_keys[pygame.K_LSHIFT] or self.PHYSICS.DASH.is_active):
+        if(new_keys[pygame.K_LSHIFT]):
             self.PHYSICS.dash()
-
-        self.PHYSICS.apply_grav()
 
         dir = 1 * keys[pygame.K_d] - 1 * keys[pygame.K_a]
         self.PHYSICS.run(dir)
@@ -31,8 +29,26 @@ class Character(LevelObject):
             self.PHYSICS.jump()
 
         self.__debug()
+    
+    def fixed_step_behaviour(self, delta_time: float):
+        self.PHYSICS.set_delta_time(delta_time)
+        self.PHYSICS.apply_grav()
+
+        keys = pygame.key.get_pressed()
+        dir = 1 * keys[pygame.K_d] - 1 * keys[pygame.K_a]
+        self.PHYSICS.run(dir)
+
+        if(keys[pygame.K_w] and self.PHYSICS.JUMP.on_ground):
+            self.PHYSICS.jump()
+
         self.PHYSICS.collide()
         self.PHYSICS.move()
+        self.death_check()
+
+    def death_check(self) -> None:
+        hazard_contacts = self.GAME.level.HAZARD.collides(self, False)
+        if(len(hazard_contacts) > 0):
+            self.GAME.set_command(Control.restart_level())
 
     def give_air_jumps(self, count: int) -> None:
         self.PHYSICS.JUMP.air_jumps += count
@@ -99,7 +115,7 @@ class Finish(LevelObject):
     def __init__(self, sprite_path: str, pos: level_pos, game: Game_manager) -> None:
         super().__init__(sprite_path, pos, Vector2(1, 1), game)
 
-    def behaviour(self) -> None:
+    def fixed_step_behaviour(self, delta_time) -> None:
         character = self.GAME.level.PLAYER
         if(self.overlap(character)):
             self.GAME.set_command(Control.close_level())
@@ -111,7 +127,7 @@ class Collectable(LevelObject):
         self.DIFF: character_diff = diff
         self.is_collected: bool = False
 
-    def behaviour(self) -> None:
+    def fixed_step_behaviour(self, delta_time: float) -> None:
         character = self.GAME.level.PLAYER
         collide_with_character = self.overlap(character)
         if(collide_with_character and not self.is_collected):
@@ -120,6 +136,7 @@ class Collectable(LevelObject):
             character.give_dashes(self.DIFF.dashes)
             character.increase_dashes(self.DIFF.def_dashes)
             self.is_collected = True
+            self.GAME.level.collect_object(self)
 
 class MovingCollectable(Collectable):
     from Game import Game_manager
@@ -131,14 +148,14 @@ class MovingCollectable(Collectable):
         self.DIR: Vector2 = (self.DESTINATION - self.START).to_vector2().normalize()
         self.to_end: bool = True
 
-    def behaviour(self) -> None:
+    def fixed_step_behaviour(self, delta_time: float) -> None:
         target: level_pos = None
         if(self.to_end):
             target = self.DESTINATION
         else:
             target = self.START
         left = self.level_pos.vector2_to(target).length()
-        step = self.SPEED * self.GAME.FRAME.delta_time
+        step = self.SPEED * delta_time
         offset = self.DIR.copy()
         offset *= direction(self.to_end)
         if(step < left):
@@ -147,4 +164,4 @@ class MovingCollectable(Collectable):
             offset *= left
             self.to_end = not self.to_end
         self.move_by(level_pos.from_vector2(offset))
-        super().behaviour()
+        super().fixed_step_behaviour(delta_time)

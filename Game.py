@@ -116,6 +116,7 @@ class Frame:
         self.CLOCK: pygame.Clock = pygame.time.Clock()
         self.RENDER_GROUPS: list[pygame.sprite.Group] = []
         self.delta_time: float = 0
+        self.FIXED_DELTA_TIME: float = 0.03
 
     def next(self) -> None:
         self.delta_time = self.CLOCK.tick(1000) / 1000
@@ -128,8 +129,10 @@ class Frame:
 
 class Level:
     from Objects import Tilemap, Character, Collectable, Finish
+    from BasicObjects import LevelObject
     def __init__(self, generator: Callable[[Game_manager], None], size_factor: int, game: Game_manager) -> None:
-        from Objects import Tilemap, Character, Collectable, Finish
+        from Objects import Tilemap, Character
+        from BasicObjects import LevelObject
         self.GAME: Game_manager = game
         self.SPRITES: pygame.sprite.Group = pygame.sprite.Group()
         self.GENERATOR: Callable[[Game_manager], None] = generator
@@ -137,9 +140,9 @@ class Level:
         self.TILE_SIZE: int = self.GAME.FRAME.SCREEN.width / (16 * self.SIZE)
         self.GROUND: Tilemap = None
         self.HAZARD: Tilemap = None
-        self.COLLECTABLES: list[type[Collectable]] = []
+        self.OBJECTS: list[type[LevelObject]] = []
+        self.COLLECTED: list[type[LevelObject]] = []
         self.PLAYER: Character = None
-        self.FINISH: Finish = None
 
     @staticmethod
     def parse_level(level_struct: dict) -> Callable[[Game_manager], None]:
@@ -300,16 +303,20 @@ class Level:
         self.GENERATOR(self.GAME)
 
     def logic(self) -> None:
-        self.PLAYER.behaviour()
-        for collectable in self.COLLECTABLES:
-            collectable.behaviour()
-            if(collectable.is_collected):
-                self.SPRITES.remove(collectable)
-                self.COLLECTABLES.remove(collectable)
-        hazard_contacts = self.HAZARD.collides(self.PLAYER, False)
-        if(len(hazard_contacts) > 0):
-            self.GAME.set_command(Control.restart_level())
-        self.FINISH.behaviour()
+        for object in self.OBJECTS:
+            object.behaviour()
+        delta_time = self.GAME.FRAME.delta_time
+        fixed_delta_time = self.GAME.FRAME.FIXED_DELTA_TIME
+        while delta_time > 0:
+            current_delta = 0
+            if(delta_time > fixed_delta_time):
+                current_delta = fixed_delta_time
+            else:
+                current_delta = delta_time
+            delta_time -= current_delta
+            for object in self.OBJECTS:
+                object.fixed_step_behaviour(current_delta)
+        self.remove_collected_objects()
 
     def add_ground_tile(self, sprite_path: str, tile_pos: Vector2) -> None:
         self.GROUND.addTile(sprite_path, tile_pos)
@@ -322,23 +329,33 @@ class Level:
         if(self.PLAYER != None):
             raise RuntimeError("More than one character can't be spawned")
         self.PLAYER = Character(sprite_path, level_pos.from_vector2(pos), jump_dist, jump_height, jump_time, dash_dist, dash_time, self.GAME)
+        self.OBJECTS.append(self.PLAYER)
         self.SPRITES.add(self.PLAYER)
 
-    def add_finish(self, sprite_path: str, pos: Vector2):
+    def add_finish(self, sprite_path: str, pos: Vector2) -> None:
         from Objects import Finish
-        if(self.FINISH != None):
-            raise RuntimeError("More than one finish can't be added")
-        self.FINISH = Finish(sprite_path, level_pos.from_vector2(pos), self.GAME)
-        self.SPRITES.add(self.FINISH)
+        finish = Finish(sprite_path, level_pos.from_vector2(pos), self.GAME)
+        self.OBJECTS.append(finish)
+        self.SPRITES.add(finish)
 
     def add_static_collectable(self, sprite_path: str, pos: Vector2, diff: character_diff) -> None:
         from Objects import Collectable
         collectable = Collectable(sprite_path, level_pos.from_vector2(pos), diff, self.GAME)
-        self.COLLECTABLES.append(collectable)
+        self.OBJECTS.append(collectable)
         self.SPRITES.add(collectable)
 
     def add_dynamic_collectable(self, sprite_path: str, pos: Vector2, diff: character_diff, speed: float, destination: Vector2) -> None:
         from Objects import MovingCollectable
         collectable = MovingCollectable(sprite_path, level_pos.from_vector2(pos), diff, speed, level_pos.from_vector2(destination), self.GAME)
-        self.COLLECTABLES.append(collectable)
+        self.OBJECTS.append(collectable)
         self.SPRITES.add(collectable)
+
+    def collect_object(self, object: type[LevelObject]) -> None:
+        if(not object in self.COLLECTED):
+            self.COLLECTED.append(object)
+
+    def remove_collected_objects(self) -> None:
+        for object in self.COLLECTED:
+            self.OBJECTS.remove(object)
+            self.SPRITES.remove(object)
+        self.COLLECTED.clear()

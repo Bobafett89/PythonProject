@@ -54,7 +54,7 @@ class BasicSprite(pygame.sprite.Sprite):
         self.image = image
         self.rescale()
 
-    def load_image(self, sprite_path: str) -> None:
+    def load_image(self, sprite_path: str | None) -> None:
         img: pygame.Surface = None
         try:
             if(sprite_path != None):
@@ -68,6 +68,9 @@ class BasicSprite(pygame.sprite.Sprite):
         self.set_image(img)
 
     def behaviour(self) -> None:
+        pass
+
+    def fixed_step_behaviour(self, delta_time: float):
         pass
     
 

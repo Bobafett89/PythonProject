@@ -6,6 +6,7 @@ class character_physics_controller:
         from Objects import Character
         def __init__(self, char: Character, speed: float, jump_force: float, gravity: float, dash_dist: float, dash_speed: float) -> None:
             from Objects import Character
+            self.delta_time: float = 0
             self.VELOCITY: Vector2 = Vector2(0, 0)
             self.GRAVITY: float = gravity
             self.JUMP: jump_struct = jump_struct(force=jump_force)
@@ -19,12 +20,11 @@ class character_physics_controller:
             return self.CHAR.GAME
 
         @property
-        def delta_time(self) -> float:
-            return self.GAME.FRAME.delta_time
-
-        @property
         def step(self) -> Vector2:
             return self.VELOCITY * self.delta_time
+
+        def set_delta_time(self, delta_time: float):
+            self.delta_time = delta_time
 
         def collide(self) -> None:
             from BasicObjects import LevelObject
@@ -84,15 +84,6 @@ class character_physics_controller:
                 dash.left = dash.distance
                 dash.count -= 1
                 self.VELOCITY.x = dash.speed * self.dir
-            if(dash.is_active):
-                if(dash.left > 0):
-                    if(abs(self.step.x) <= dash.left):
-                        self.VELOCITY.x = dash.speed * self.dir
-                    else:
-                        self.VELOCITY.x = dash.left * self.dir / self.delta_time
-                else:
-                    dash.is_active = False
-                    dash.destination = None
 
         def jump(self) -> None:
             if(not self.DASH.is_active):
@@ -104,6 +95,10 @@ class character_physics_controller:
         def move(self) -> None:
             if(self.VELOCITY.x != 0):
                 self.dir = direction(self.VELOCITY.x > 0)
+                dash = self.DASH
+                if(dash.is_active):
+                    if(abs(self.step.x) >= dash.left):
+                        self.VELOCITY.x = dash.left * self.dir / self.delta_time
+                        dash.is_active = False
+                    dash.left -= abs(self.step.x)
             self.CHAR.move_by(level_pos.from_vector2(self.step))
-            if(self.DASH.is_active):
-                self.DASH.left -= abs(self.step.x)

@@ -1,6 +1,6 @@
 import pygame
 from pygame import Vector2
-from Utils import character_diff, level_pos, Control, Command
+from Utils import character_diff, level_pos, Control, Command, tilemap_info, vector2_div, vector2_mult
 from os import path
 from json import loads, decoder
 from collections.abc import Callable
@@ -60,10 +60,10 @@ class Game_manager:
                 except RuntimeError:
                     raise RuntimeError("Json has wrong structure")
                 else:
-                    self._start_level(generator, level_structure["size"])
+                    self._start_level(generator, level_structure["size"], Vector2(level_structure["tiles"]))
             
-    def _start_level(self, generator: Callable[[Game_manager], None], size_factor: int) -> None:
-        self.level = Level(generator, size_factor, self)
+    def _start_level(self, generator: Callable[[Game_manager], None], size_factor: int, tilemap_size: Vector2) -> None:
+        self.level = Level(generator, size_factor, tilemap_size, self)
         self.level.build_level()
         self.UI.clear_ui()
         self.FRAME.RENDER_GROUPS.clear()
@@ -78,7 +78,7 @@ class Game_manager:
 
     def _reset_level(self) -> None:
         level = self.level
-        self._start_level(level.GENERATOR, level.SIZE)
+        self._start_level(level.GENERATOR, level.SIZE_FACTOR, level.TILEMAP.size)
 
     def _close_game(self) -> None:
         self.is_running = False
@@ -119,7 +119,7 @@ class Frame:
         self.FIXED_DELTA_TIME: float = 0.03
 
     def next(self) -> None:
-        self.delta_time = self.CLOCK.tick(1000) / 1000
+        self.delta_time = self.CLOCK.tick(60) / 1000
 
     def render(self) -> None:
         self.SCREEN.fill("#333333")
@@ -128,18 +128,20 @@ class Frame:
         pygame.display.flip()
 
 class Level:
-    from Objects import Tilemap, Character, Collectable, Finish
+    from Objects import TilemapLayer, Character, Collectable, Finish
     from BasicObjects import LevelObject
-    def __init__(self, generator: Callable[[Game_manager], None], size_factor: int, game: Game_manager) -> None:
-        from Objects import Tilemap, Character
+    def __init__(self, generator: Callable[[Game_manager], None], size_factor: float, tilemap_size: Vector2, game: Game_manager) -> None:
+        from Objects import TilemapLayer, Character
         from BasicObjects import LevelObject
         self.GAME: Game_manager = game
         self.SPRITES: pygame.sprite.Group = pygame.sprite.Group()
         self.GENERATOR: Callable[[Game_manager], None] = generator
-        self.SIZE: int = size_factor
-        self.TILE_SIZE: int = self.GAME.FRAME.SCREEN.width / (16 * self.SIZE)
-        self.GROUND: Tilemap = None
-        self.HAZARD: Tilemap = None
+        self.SIZE_FACTOR: float = size_factor
+        self.SIZE: Vector2 = Vector2(16, 9) * self.SIZE_FACTOR
+        self.UNIT_SIZE: int = self.GAME.FRAME.SCREEN.width / (16 * self.SIZE_FACTOR)
+        self.TILEMAP: tilemap_info = tilemap_info(tilemap_size, vector2_div(self.SIZE, tilemap_size))
+        self.GROUND: TilemapLayer = None
+        self.HAZARD: TilemapLayer = None
         self.OBJECTS: list[type[LevelObject]] = []
         self.COLLECTED: list[type[LevelObject]] = []
         self.PLAYER: Character = None
@@ -251,6 +253,8 @@ class Level:
         
         valid_size = has_keys(["size"], level_struct, int)
 
+        valid_tiles = has_keys(["tiles"], level_struct, list) and validate_list(level_struct["tiles"], 2, int)
+
         valid_char = has_keys(["char"], level_struct, dict)
         if(valid_char):
             char = level_struct["char"]
@@ -289,17 +293,29 @@ class Level:
                     valid_items = False
                     break
 
-        if(not (valid_size and valid_char and valid_ground and valid_hazard and valid_finish and valid_items)):
+        if(not (valid_size and valid_tiles and valid_char and valid_ground and valid_hazard and valid_finish and valid_items)):
             raise RuntimeError("Not valid structure of a level")
 
         return generator
 
+    def convert_pos(self, pos: level_pos, to_tilemap: bool) -> level_pos:
+        ratio = vector2_div(self.SIZE, self.TILEMAP.size)
+        unit_pos = pos.unit_pos.copy()
+        local_pos = pos.local_pos.copy()
+        if(to_tilemap):
+            unit_pos = vector2_div(unit_pos, ratio)
+            local_pos = vector2_div(local_pos, ratio)
+        else:
+            unit_pos = vector2_mult(unit_pos, ratio)
+            local_pos = vector2_mult(local_pos, ratio)
+        return level_pos.correct(level_pos(unit_pos, local_pos))
+
     def build_level(self) -> None:
-        from Objects import Tilemap
+        from Objects import TilemapLayer
         if(self.GROUND != None):
             raise RuntimeError("The level was already built.")
-        self.GROUND = Tilemap(self.GAME)
-        self.HAZARD = Tilemap(self.GAME)
+        self.GROUND = TilemapLayer(self.GAME)
+        self.HAZARD = TilemapLayer(self.GAME)
         self.GENERATOR(self.GAME)
 
     def logic(self) -> None:
@@ -317,6 +333,7 @@ class Level:
             for object in self.OBJECTS:
                 object.fixed_step_behaviour(current_delta)
         self.remove_collected_objects()
+        pass
 
     def add_ground_tile(self, sprite_path: str, tile_pos: Vector2) -> None:
         self.GROUND.addTile(sprite_path, tile_pos)

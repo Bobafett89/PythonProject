@@ -64,35 +64,48 @@ class character_diff:
     def_dashes: int = 0
 
 @dataclass
+class tilemap_info:
+    size: Vector2 = None
+    tile_size: Vector2 = None
+
+@dataclass
 class level_pos:
-    tile_pos: Vector2 = None
+    unit_pos: Vector2 = None
     local_pos: Vector2 = None
 
     def __add__(self, other: level_pos) -> level_pos:
-        new_tile = self.tile_pos + other.tile_pos
+        new_tile = self.unit_pos + other.unit_pos
         new_local = self.local_pos + other.local_pos
         return level_pos.correct(level_pos(new_tile, new_local))
     
     def __sub__(self, other: level_pos) -> level_pos:
-        new_tile = self.tile_pos - other.tile_pos
+        new_tile = self.unit_pos - other.unit_pos
         new_local = self.local_pos - other.local_pos
         return level_pos.correct(level_pos(new_tile, new_local))
     
     def to_vector2(self) -> Vector2:
-        return self.tile_pos + self.local_pos
+        return self.unit_pos + self.local_pos
     
     def vector2_to(self, other: level_pos) -> Vector2:
         return (other - self).to_vector2()
     
     def copy(self) -> level_pos:
-        new_tile = self.tile_pos.copy()
+        new_tile = self.unit_pos.copy()
         new_local = self.local_pos.copy()
         return level_pos(new_tile, new_local)
 
     @staticmethod
     def correct(pos: level_pos) -> level_pos:
-        new_tile = pos.tile_pos.copy()
+        new_tile = pos.unit_pos.copy()
         new_local = pos.local_pos.copy()
+        if(not new_tile.x % 1 == 0):
+            decimal = new_tile.x % 1
+            new_tile.x -= decimal
+            new_local.x += decimal
+        if(not new_tile.y % 1 == 0):
+            decimal = new_tile.y % 1
+            new_tile.y -= decimal
+            new_local.y += decimal
         if(not in_right_interval(new_local.x, 0, 1)):
             dir = direction(new_local.x < 0)
             new_tile.x -= dir

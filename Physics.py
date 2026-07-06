@@ -52,19 +52,56 @@ class character_physics_controller:
                 rel_topleft = (new_state.topleft_border - tile.topleft_border).to_vector2()
                 rel_botright = (new_state.botright_border - tile.topleft_border).to_vector2()
                 topleft = Vector2(max(0, rel_topleft.x), max(0, rel_topleft.y))
-                botright = Vector2(min(1, rel_botright.x), min(1, rel_botright.y))
+                botright = Vector2(min(tile.level_size.x, rel_botright.x), min(tile.level_size.y, rel_botright.y))
                 size = botright - topleft
                 offset = Vector2(0, 0)
-                if(self.CHAR.tile_pos.x == tile.tile_pos.x or (size.x >= size.y and not self.CHAR.tile_pos.y == tile.tile_pos.y)):
-                    dir = direction(self.CHAR.tile_pos.y > tile.tile_pos.y)
+                dist = self.CHAR.level_pos.vector2_to(tile.level_pos)
+                if(abs(dist.x) < tile.border_offset.x + self.CHAR.border_offset.x or (size.x >= size.y and not abs(dist.y) < tile.border_offset.y + self.CHAR.border_offset.y)):
+                    dir = direction(dist.y < 0)
                     offset.y = size.y * dir
                     hit_floor()
                 else:
-                    dir = direction(self.CHAR.tile_pos.x > tile.tile_pos.x)
+                    dir = direction(dist.x < 0)
                     offset.x = size.x * dir
                     hit_wall()
                 self.VELOCITY += offset / self.delta_time
                 new_state = next_state()
+
+        def ncollide(self) -> None:
+            from BasicObjects import LevelObject
+            def hit_floor() -> None:
+                if(self.VELOCITY.y > 0):
+                    self.JUMP.on_ground = True
+                    if(self.JUMP.air_jumps < self.JUMP.def_air_jumps):
+                        self.JUMP.air_jumps = self.JUMP.def_air_jumps
+                    if(self.DASH.count < self.DASH.def_count):
+                        self.DASH.count = self.DASH.def_count
+
+            def hit_wall() -> None:
+                self.DASH.is_active = False
+                self.DASH.destination = None
+
+            if(self.VELOCITY.y != 0):
+                self.JUMP.on_ground = False
+            tiles = self.GAME.level.GROUND.collides(self.CHAR, False)
+            tiles.sort(key=(lambda tile: self.CHAR.level_pos.vector2_to(tile.level_pos).length()))
+            for tile in tiles:
+                rel_topleft = (self.CHAR.topleft_border - tile.topleft_border).to_vector2()
+                rel_botright = (self.CHAR.botright_border - tile.topleft_border).to_vector2()
+                topleft = Vector2(max(0, rel_topleft.x), max(0, rel_topleft.y))
+                botright = Vector2(min(tile.level_size.x, rel_botright.x), min(tile.level_size.y, rel_botright.y))
+                size = botright - topleft
+                offset = Vector2(0, 0)
+                dist = self.CHAR.level_pos.vector2_to(tile.level_pos)
+                if(abs(dist.x) < tile.border_offset.x + self.CHAR.border_offset.x or (size.x >= size.y and not abs(dist.y) < tile.border_offset.y + self.CHAR.border_offset.y)):
+                    dir = direction(dist.y < 0)
+                    offset.y = size.y * dir
+                    hit_floor()
+                else:
+                    dir = direction(dist.x < 0)
+                    offset.x = size.x * dir
+                    hit_wall()
+                self.VELOCITY += offset / self.delta_time
                 
         def apply_grav(self) -> None:
             if(not self.DASH.is_active):

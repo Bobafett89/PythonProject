@@ -9,7 +9,7 @@ class BasicSprite(pygame.sprite.Sprite):
         from Game import Game_manager
         super().__init__()
         self.GAME: Game_manager = game
-        self.unit: Vector2 = self.calc_unit()
+        self.percent: Vector2 = self.calc_percent()
         self.screen_pos: Vector2 = screen_pos
         self.screen_size: Vector2 = screen_size
 
@@ -27,11 +27,11 @@ class BasicSprite(pygame.sprite.Sprite):
     def botright(self) -> Vector2:
         return self.screen_pos + self.edge_offset
     
-    def calc_unit(self) -> Vector2:
+    def calc_percent(self) -> Vector2:
         return Vector2(self.GAME.FRAME.SCREEN.size) / 100
 
     def set_center(self) -> None:
-        self.rect = self.rect.move_to(center=vector2_mult(self.screen_pos, self.unit))
+        self.rect = self.rect.move_to(center=vector2_mult(self.screen_pos, self.percent))
 
     def move_to(self, new_pos: Vector2) -> None:
         self.screen_pos = new_pos
@@ -41,8 +41,8 @@ class BasicSprite(pygame.sprite.Sprite):
         self.move_to(self.screen_pos + offset)
 
     def rescale(self) -> None:
-        self.unit = self.calc_unit()
-        self.image = pygame.transform.scale(self.image, vector2_mult(self.screen_size, self.unit))
+        self.percent = self.calc_percent()
+        self.image = pygame.transform.scale(self.image, vector2_mult(self.screen_size, self.percent))
         self.rect = self.image.get_rect()
         self.set_center()
 
@@ -78,7 +78,7 @@ class LevelObject(BasicSprite):
     from Game import Game_manager
     def __init__(self, sprite_path: str | None, pos_in_level: level_pos, level_size: Vector2, game: Game_manager) -> None:
         self.GAME = game
-        self.unit = self.calc_unit()
+        self.percent = self.calc_percent()
         self.level_pos: level_pos = pos_in_level
         self.level_size: Vector2 = level_size
         super().__init__(sprite_path, self.calc_screen_pos(), self.calc_screen_size(), game)
@@ -96,25 +96,25 @@ class LevelObject(BasicSprite):
         return self.level_pos + level_pos.from_vector2(self.border_offset)
     
     @property
-    def TILE_SIZE(self) -> int:
-        return self.GAME.level.TILE_SIZE
+    def UNIT_SIZE(self) -> int:
+        return self.GAME.level.UNIT_SIZE
     
     @property
-    def tile_pos(self) -> Vector2:
-        return self.level_pos.tile_pos
+    def unit_pos(self) -> Vector2:
+        return self.level_pos.unit_pos
     
     @property
     def local_pos(self) -> Vector2:
         return self.level_pos.local_pos
 
     def calc_screen_pos(self) -> Vector2:
-        return vector2_div(self.tile_pos * self.TILE_SIZE + self.local_pos * self.TILE_SIZE, self.unit)
+        return vector2_div(self.unit_pos * self.UNIT_SIZE + self.local_pos * self.UNIT_SIZE, self.percent)
     
     def calc_screen_size(self) -> Vector2:
-        return vector2_div(self.level_size * self.TILE_SIZE, self.unit)
+        return vector2_div(self.level_size * self.UNIT_SIZE, self.percent)
 
     def move_to(self, new_pos: level_pos) -> None:
-        precision = 5
+        precision = 3
         new_pos.local_pos = Vector2(round(new_pos.local_pos.x, precision), round(new_pos.local_pos.y, precision))
         self.level_pos = new_pos
         super().move_to(self.calc_screen_pos())
@@ -128,4 +128,4 @@ class LevelObject(BasicSprite):
 
     def overlap(self, other: type[LevelObject]) -> bool:
         dist = self.level_pos.vector2_to(other.level_pos)
-        return abs(dist.x) <= self.border_offset.x + other.border_offset.x and abs(dist.y) <= self.border_offset.y + other.border_offset.y
+        return abs(dist.x) < self.border_offset.x + other.border_offset.x and abs(dist.y) < self.border_offset.y + other.border_offset.y

@@ -1,7 +1,7 @@
 import pygame
 from pygame import Vector2
 from BasicObjects import LevelObject
-from Utils import character_diff, level_pos, Control, in_right_interval, direction
+from Utils import character_diff, level_pos, Control, in_right_interval, direction, vector2_div
 from math import ceil
 
 class Character(LevelObject):
@@ -73,21 +73,36 @@ class Character(LevelObject):
         if(new_keys[pygame.K_2]):
            self.increase_dashes(1)
 
-class Tilemap:
+class TilemapLayer:
     from Game import Game_manager
     def __init__(self, game: Game_manager) -> None:
         from Game import Game_manager
         self.GAME: Game_manager = game
         self.SPRITES: pygame.sprite.Group = pygame.sprite.Group()
         self.MAP: list[list[LevelObject]] = []
-        for i in range(16 * self.GAME.level.SIZE):
+        for i in range(int(self.SIZE.x)):
             self.MAP.append([])
-            for j in range(9 * self.GAME.level.SIZE):
+            for j in range(int(self.SIZE.y)):
                 self.MAP[i].append(None)
+
+    @property
+    def SIZE(self) -> Vector2:
+        return self.GAME.level.TILEMAP.size
+    
+    @property
+    def TILE_SIZE(self) -> Vector2:
+        return self.GAME.level.TILEMAP.tile_size
+    
+    def convert_to_unit(self, pos: level_pos) -> level_pos:
+        return self.GAME.level.convert_pos(pos, False)
+    
+    def convert_to_tilemap(self, pos: level_pos) -> level_pos:
+        return self.GAME.level.convert_pos(pos, True)
     
     def addTile(self, sprite_path: str, tile_pos: Vector2) -> None:
         if(self.MAP[int(tile_pos.x)][int(tile_pos.y)] == None):
-            tile = LevelObject(sprite_path, level_pos(tile_pos, Vector2(0.5, 0.5)), Vector2(1, 1), self.GAME)
+            pos = self.convert_to_unit(level_pos(tile_pos, Vector2(0.5, 0.5)))
+            tile = LevelObject(sprite_path, pos, self.TILE_SIZE, self.GAME)
             self.SPRITES.add(tile)
             self.MAP[int(tile_pos.x)][int(tile_pos.y)] = tile
 
@@ -96,16 +111,19 @@ class Tilemap:
             return self.MAP[int(tile_pos.x)][int(tile_pos.y)]
         else: 
             if(pseudo_tile):
-                return LevelObject(None, level_pos(tile_pos, Vector2(0.5, 0.5)), Vector2(1, 1), self.GAME)
+                pos = self.convert_to_unit(level_pos(tile_pos, Vector2(0.5, 0.5)))
+                return LevelObject(None, pos, self.TILE_SIZE, self.GAME)
             else:
                 return None
 
     def collides(self, object: type[LevelObject], pseudo_tiles: bool) -> list[LevelObject]:
-        tile_offset = Vector2(ceil(object.border_offset.x), ceil(object.border_offset.y))
+        tilemap_pos = self.convert_to_tilemap(object.level_pos)
+        border_offset = self.convert_to_tilemap(level_pos.from_vector2(object.border_offset)).to_vector2()
+        tile_offset = Vector2(ceil(border_offset.x), ceil(border_offset.y))
         collisions = []
         for i in range(int(-tile_offset.x), int(tile_offset.x) + 1):
             for j in range(int(-tile_offset.y), int(tile_offset.y) + 1):
-                tile = self.getTile(Vector2(object.tile_pos.x + i, object.tile_pos.y + j), pseudo_tiles)
+                tile = self.getTile(Vector2(tilemap_pos.unit_pos.x + i, tilemap_pos.unit_pos.y + j), pseudo_tiles)
                 if(tile != None and tile.overlap(object)):
                     collisions.append(tile)
         return collisions

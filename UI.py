@@ -33,13 +33,13 @@ class Text(BasicSprite):
         super().__init__(None, pos, max_size, game)
         font = pygame.font.Font(size=self.get_max_point_size(text, max_size))
         font.align = pygame.FONT_CENTER
-        img = font.render(text, True, "white", wraplength=int(max_size.x * self.unit.x))
-        text_size = vector2_div(Vector2(img.size), self.unit)
+        img = font.render(text, True, "white", wraplength=int(max_size.x * self.percent.x))
+        text_size = vector2_div(Vector2(img.size), self.percent)
         self.set_size(text_size)
         self.set_image(img)
     
     def get_max_point_size(self, text: str, max_size: Vector2) -> int:
-        pixel_size = vector2_mult(max_size, self.unit)
+        pixel_size = vector2_mult(max_size, self.percent)
         point_size = 1
         fit = True
         while fit:
@@ -63,7 +63,7 @@ class Button(BasicSprite):
 
     def behaviour(self) -> bool:
         pressed = False
-        cursor_pos = vector2_div(Vector2(pygame.mouse.get_pos()), self.unit)
+        cursor_pos = vector2_div(Vector2(pygame.mouse.get_pos()), self.percent)
         new_keys = pygame.mouse.get_just_pressed()
         if(new_keys[0] and in_interval(cursor_pos.x, self.topleft.x, self.botright.x) and in_interval(cursor_pos.y, self.topleft.y, self.botright.y)):
             self.CALLBACK(self.GAME)

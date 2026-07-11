@@ -1,6 +1,6 @@
 import pygame
 from pygame import Vector2
-from Utils import character_diff, level_pos, Control, Command, tilemap_info, vector2_div, vector2_mult
+from Utils import character_diff, Control, Command, tilemap_info, vector2_div, vector2_mult
 from os import path
 from json import loads, decoder
 from collections.abc import Callable
@@ -112,14 +112,15 @@ class UI:
 
 class Frame:
     def __init__(self) -> None:
-        self.SCREEN: pygame.Surface = pygame.display.set_mode()
+        screen_flags = pygame.FULLSCREEN | pygame.SCALED
+        self.SCREEN: pygame.Surface = pygame.display.set_mode((1536, 864), screen_flags)
         self.CLOCK: pygame.Clock = pygame.time.Clock()
         self.RENDER_GROUPS: list[pygame.sprite.Group] = []
         self.delta_time: float = 0
-        self.FIXED_DELTA_TIME: float = 0.03
+        self.FIXED_DELTA_TIME: float = 0.02
 
     def next(self) -> None:
-        self.delta_time = self.CLOCK.tick(60) / 1000
+        self.delta_time = self.CLOCK.tick(1000) / 1000
 
     def render(self) -> None:
         self.SCREEN.fill("#333333")
@@ -129,22 +130,23 @@ class Frame:
 
 class Level:
     from Objects import TilemapLayer, Character, Collectable, Finish
-    from BasicObjects import LevelObject
+    from BasicObjects import BasicSprite
     def __init__(self, generator: Callable[[Game_manager], None], size_factor: float, tilemap_size: Vector2, game: Game_manager) -> None:
         from Objects import TilemapLayer, Character
-        from BasicObjects import LevelObject
+        from BasicObjects import BasicSprite
         self.GAME: Game_manager = game
         self.SPRITES: pygame.sprite.Group = pygame.sprite.Group()
         self.GENERATOR: Callable[[Game_manager], None] = generator
         self.SIZE_FACTOR: float = size_factor
-        self.SIZE: Vector2 = Vector2(16, 9) * self.SIZE_FACTOR
-        self.UNIT_SIZE: int = self.GAME.FRAME.SCREEN.width / (16 * self.SIZE_FACTOR)
-        self.TILEMAP: tilemap_info = tilemap_info(tilemap_size, vector2_div(self.SIZE, tilemap_size))
+        self.UNITS: Vector2 = Vector2(16, 9) * self.SIZE_FACTOR
+        self.UNIT_PIXEL_SIZE: float = self.GAME.FRAME.SCREEN.width / self.UNITS.x
+        self.TILEMAP: tilemap_info = tilemap_info(tilemap_size, vector2_div(Vector2(1, 1), tilemap_size))
         self.GROUND: TilemapLayer = None
         self.HAZARD: TilemapLayer = None
-        self.OBJECTS: list[type[LevelObject]] = []
-        self.COLLECTED: list[type[LevelObject]] = []
+        self.OBJECTS: list[type[BasicSprite]] = []
+        self.COLLECTED: list[type[BasicSprite]] = []
         self.PLAYER: Character = None
+        self.acc_delta_time: float = 0
 
     @staticmethod
     def parse_level(level_struct: dict) -> Callable[[Game_manager], None]:
@@ -298,17 +300,21 @@ class Level:
 
         return generator
 
-    def convert_pos(self, pos: level_pos, to_tilemap: bool) -> level_pos:
-        ratio = vector2_div(self.SIZE, self.TILEMAP.size)
-        unit_pos = pos.unit_pos.copy()
-        local_pos = pos.local_pos.copy()
+    def convert_tilemap_vector(self, vector: Vector2, to_tilemap: bool = False) -> Vector2:
+        new_vector = Vector2(0, 0)
         if(to_tilemap):
-            unit_pos = vector2_div(unit_pos, ratio)
-            local_pos = vector2_div(local_pos, ratio)
+            new_vector = vector2_mult(vector, self.TILEMAP.size)
         else:
-            unit_pos = vector2_mult(unit_pos, ratio)
-            local_pos = vector2_mult(local_pos, ratio)
-        return level_pos.correct(level_pos(unit_pos, local_pos))
+            new_vector = vector2_div(vector, self.TILEMAP.size)
+        return new_vector
+
+    def convert_unit_vector(self, vector: Vector2, to_unit: bool = False) -> Vector2:
+        new_vector = Vector2(0, 0)
+        if(to_unit):
+            new_vector = vector2_mult(vector, self.UNITS)
+        else:
+            new_vector = vector2_div(vector, self.UNITS)
+        return new_vector
 
     def build_level(self) -> None:
         from Objects import TilemapLayer
@@ -321,17 +327,12 @@ class Level:
     def logic(self) -> None:
         for object in self.OBJECTS:
             object.behaviour()
-        delta_time = self.GAME.FRAME.delta_time
-        fixed_delta_time = self.GAME.FRAME.FIXED_DELTA_TIME
-        while delta_time > 0:
-            current_delta = 0
-            if(delta_time > fixed_delta_time):
-                current_delta = fixed_delta_time
-            else:
-                current_delta = delta_time
-            delta_time -= current_delta
+        self.acc_delta_time += self.GAME.FRAME.delta_time
+        fixed_delta = self.GAME.FRAME.FIXED_DELTA_TIME
+        while self.acc_delta_time > fixed_delta:
+            self.acc_delta_time -= fixed_delta
             for object in self.OBJECTS:
-                object.fixed_step_behaviour(current_delta)
+                object.fixed_step_behaviour()
         self.remove_collected_objects()
         pass
 
@@ -345,29 +346,29 @@ class Level:
         from Objects import Character
         if(self.PLAYER != None):
             raise RuntimeError("More than one character can't be spawned")
-        self.PLAYER = Character(sprite_path, level_pos.from_vector2(pos), jump_dist, jump_height, jump_time, dash_dist, dash_time, self.GAME)
+        self.PLAYER = Character(sprite_path, pos, jump_dist, jump_height, jump_time, dash_dist, dash_time, self.GAME)
         self.OBJECTS.append(self.PLAYER)
         self.SPRITES.add(self.PLAYER)
 
     def add_finish(self, sprite_path: str, pos: Vector2) -> None:
         from Objects import Finish
-        finish = Finish(sprite_path, level_pos.from_vector2(pos), self.GAME)
+        finish = Finish(sprite_path, pos, Vector2(1, 1), self.GAME)
         self.OBJECTS.append(finish)
         self.SPRITES.add(finish)
 
     def add_static_collectable(self, sprite_path: str, pos: Vector2, diff: character_diff) -> None:
         from Objects import Collectable
-        collectable = Collectable(sprite_path, level_pos.from_vector2(pos), diff, self.GAME)
+        collectable = Collectable(sprite_path, pos, Vector2(1, 1), diff, self.GAME)
         self.OBJECTS.append(collectable)
         self.SPRITES.add(collectable)
 
     def add_dynamic_collectable(self, sprite_path: str, pos: Vector2, diff: character_diff, speed: float, destination: Vector2) -> None:
         from Objects import MovingCollectable
-        collectable = MovingCollectable(sprite_path, level_pos.from_vector2(pos), diff, speed, level_pos.from_vector2(destination), self.GAME)
+        collectable = MovingCollectable(sprite_path, pos, Vector2(1, 1), diff, speed, destination, self.GAME)
         self.OBJECTS.append(collectable)
         self.SPRITES.add(collectable)
 
-    def collect_object(self, object: type[LevelObject]) -> None:
+    def collect_object(self, object: type[BasicSprite]) -> None:
         if(not object in self.COLLECTED):
             self.COLLECTED.append(object)
 

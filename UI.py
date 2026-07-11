@@ -1,7 +1,7 @@
 import pygame
 from pygame import Vector2
 from BasicObjects import BasicSprite
-from Utils import in_interval, vector2_div, vector2_mult
+from Utils import in_interval, vector2_div, vector2_mult, round_vector2
 from collections.abc import Callable
 
 class UI_Screen:
@@ -33,13 +33,13 @@ class Text(BasicSprite):
         super().__init__(None, pos, max_size, game)
         font = pygame.font.Font(size=self.get_max_point_size(text, max_size))
         font.align = pygame.FONT_CENTER
-        img = font.render(text, True, "white", wraplength=int(max_size.x * self.percent.x))
-        text_size = vector2_div(Vector2(img.size), self.percent)
+        img = font.render(text, True, "white", wraplength=round(max_size.x * self.SCREEN_SIZE.x))
+        text_size = vector2_div(Vector2(img.size), self.SCREEN_SIZE)
         self.set_size(text_size)
         self.set_image(img)
     
     def get_max_point_size(self, text: str, max_size: Vector2) -> int:
-        pixel_size = vector2_mult(max_size, self.percent)
+        pixel_size = round_vector2(vector2_mult(max_size, self.SCREEN_SIZE))
         point_size = 1
         fit = True
         while fit:
@@ -63,7 +63,7 @@ class Button(BasicSprite):
 
     def behaviour(self) -> bool:
         pressed = False
-        cursor_pos = vector2_div(Vector2(pygame.mouse.get_pos()), self.percent)
+        cursor_pos = vector2_div(Vector2(pygame.mouse.get_pos()), self.SCREEN_SIZE)
         new_keys = pygame.mouse.get_just_pressed()
         if(new_keys[0] and in_interval(cursor_pos.x, self.topleft.x, self.botright.x) and in_interval(cursor_pos.y, self.topleft.y, self.botright.y)):
             self.CALLBACK(self.GAME)

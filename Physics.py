@@ -1,12 +1,11 @@
 from pygame import Vector2
-from Utils import jump_struct, dash_struct, level_pos, direction
+from Utils import jump_struct, dash_struct, direction, abs_vector2
 
 class character_physics_controller:
         from Game import Game_manager
         from Objects import Character
         def __init__(self, char: Character, speed: float, jump_force: float, gravity: float, dash_dist: float, dash_speed: float) -> None:
             from Objects import Character
-            self.delta_time: float = 0
             self.VELOCITY: Vector2 = Vector2(0, 0)
             self.GRAVITY: float = gravity
             self.JUMP: jump_struct = jump_struct(force=jump_force)
@@ -19,15 +18,8 @@ class character_physics_controller:
         def GAME(self) -> Game_manager:
             return self.CHAR.GAME
 
-        @property
-        def step(self) -> Vector2:
-            return self.VELOCITY * self.delta_time
-
-        def set_delta_time(self, delta_time: float):
-            self.delta_time = delta_time
-
         def collide(self) -> None:
-            from BasicObjects import LevelObject
+            from BasicObjects import BasicSprite
             def hit_floor() -> None:
                 if(self.VELOCITY.y > 0):
                     self.JUMP.on_ground = True
@@ -40,72 +32,34 @@ class character_physics_controller:
                 self.DASH.is_active = False
                 self.DASH.destination = None
 
-            def next_state() -> LevelObject:
-                return LevelObject(None, self.CHAR.level_pos + level_pos.from_vector2(self.step), self.CHAR.level_size, self.GAME)
+            def next_state() -> BasicSprite:
+                return BasicSprite(None, self.CHAR.pos + self.VELOCITY, self.CHAR.size, self.GAME)
 
             if(self.VELOCITY.y != 0):
                 self.JUMP.on_ground = False
             new_state = next_state()
             tiles = self.GAME.level.GROUND.collides(new_state, True)
-            tiles.sort(key=(lambda tile: self.CHAR.level_pos.vector2_to(tile.level_pos).length()))
+            tiles.sort(key=(lambda tile: (tile.pos - self.CHAR.pos).length()))
             for tile in tiles:
-                rel_topleft = (new_state.topleft_border - tile.topleft_border).to_vector2()
-                rel_botright = (new_state.botright_border - tile.topleft_border).to_vector2()
-                topleft = Vector2(max(0, rel_topleft.x), max(0, rel_topleft.y))
-                botright = Vector2(min(tile.level_size.x, rel_botright.x), min(tile.level_size.y, rel_botright.y))
-                size = botright - topleft
-                offset = Vector2(0, 0)
-                dist = self.CHAR.level_pos.vector2_to(tile.level_pos)
-                if(abs(dist.x) < tile.border_offset.x + self.CHAR.border_offset.x or (size.x >= size.y and not abs(dist.y) < tile.border_offset.y + self.CHAR.border_offset.y)):
-                    dir = direction(dist.y < 0)
-                    offset.y = size.y * dir
-                    hit_floor()
-                else:
-                    dir = direction(dist.x < 0)
-                    offset.x = size.x * dir
-                    hit_wall()
-                self.VELOCITY += offset / self.delta_time
-                new_state = next_state()
-
-        def ncollide(self) -> None:
-            from BasicObjects import LevelObject
-            def hit_floor() -> None:
-                if(self.VELOCITY.y > 0):
-                    self.JUMP.on_ground = True
-                    if(self.JUMP.air_jumps < self.JUMP.def_air_jumps):
-                        self.JUMP.air_jumps = self.JUMP.def_air_jumps
-                    if(self.DASH.count < self.DASH.def_count):
-                        self.DASH.count = self.DASH.def_count
-
-            def hit_wall() -> None:
-                self.DASH.is_active = False
-                self.DASH.destination = None
-
-            if(self.VELOCITY.y != 0):
-                self.JUMP.on_ground = False
-            tiles = self.GAME.level.GROUND.collides(self.CHAR, False)
-            tiles.sort(key=(lambda tile: self.CHAR.level_pos.vector2_to(tile.level_pos).length()))
-            for tile in tiles:
-                rel_topleft = (self.CHAR.topleft_border - tile.topleft_border).to_vector2()
-                rel_botright = (self.CHAR.botright_border - tile.topleft_border).to_vector2()
-                topleft = Vector2(max(0, rel_topleft.x), max(0, rel_topleft.y))
-                botright = Vector2(min(tile.level_size.x, rel_botright.x), min(tile.level_size.y, rel_botright.y))
-                size = botright - topleft
-                offset = Vector2(0, 0)
-                dist = self.CHAR.level_pos.vector2_to(tile.level_pos)
-                if(abs(dist.x) < tile.border_offset.x + self.CHAR.border_offset.x or (size.x >= size.y and not abs(dist.y) < tile.border_offset.y + self.CHAR.border_offset.y)):
-                    dir = direction(dist.y < 0)
-                    offset.y = size.y * dir
-                    hit_floor()
-                else:
-                    dir = direction(dist.x < 0)
-                    offset.x = size.x * dir
-                    hit_wall()
-                self.VELOCITY += offset / self.delta_time
+                min_dist = self.CHAR.edge_offset + tile.edge_offset
+                dir = tile.pos - self.CHAR.pos
+                dist = abs_vector2(tile.pos - new_state.pos)
+                if(dist.x < min_dist.x and dist.y < min_dist.y):
+                    epsilon = 2 ** (-53)
+                    size = min_dist - dist + Vector2(epsilon, epsilon)
+                    offset = Vector2(0, 0)
+                    if(abs(dir.x) < min_dist.x or (size.x >= size.y and not abs(dir.y) < min_dist.y)):
+                        offset.y = size.y * direction(dir.y < 0)
+                        hit_floor()
+                    else:
+                        offset.x = size.x * direction(dir.x < 0)
+                        hit_wall()
+                    self.VELOCITY += offset
+                    new_state = next_state()
                 
         def apply_grav(self) -> None:
             if(not self.DASH.is_active):
-                self.VELOCITY.y += self.GRAVITY * self.delta_time
+                self.VELOCITY.y += self.GRAVITY
             else:
                 self.VELOCITY.y = 0
                 self.JUMP.on_ground = False
@@ -134,8 +88,8 @@ class character_physics_controller:
                 self.dir = direction(self.VELOCITY.x > 0)
                 dash = self.DASH
                 if(dash.is_active):
-                    if(abs(self.step.x) >= dash.left):
-                        self.VELOCITY.x = dash.left * self.dir / self.delta_time
+                    if(abs(self.VELOCITY.x) >= dash.left):
+                        self.VELOCITY.x = dash.left * self.dir
                         dash.is_active = False
-                    dash.left -= abs(self.step.x)
-            self.CHAR.move_by(level_pos.from_vector2(self.step))
+                    dash.left -= abs(self.VELOCITY.x)
+            self.CHAR.move_by(self.VELOCITY)

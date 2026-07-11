@@ -68,60 +68,6 @@ class tilemap_info:
     size: Vector2 = None
     tile_size: Vector2 = None
 
-@dataclass
-class level_pos:
-    unit_pos: Vector2 = None
-    local_pos: Vector2 = None
-
-    def __add__(self, other: level_pos) -> level_pos:
-        new_tile = self.unit_pos + other.unit_pos
-        new_local = self.local_pos + other.local_pos
-        return level_pos.correct(level_pos(new_tile, new_local))
-    
-    def __sub__(self, other: level_pos) -> level_pos:
-        new_tile = self.unit_pos - other.unit_pos
-        new_local = self.local_pos - other.local_pos
-        return level_pos.correct(level_pos(new_tile, new_local))
-    
-    def to_vector2(self) -> Vector2:
-        return self.unit_pos + self.local_pos
-    
-    def vector2_to(self, other: level_pos) -> Vector2:
-        return (other - self).to_vector2()
-    
-    def copy(self) -> level_pos:
-        new_tile = self.unit_pos.copy()
-        new_local = self.local_pos.copy()
-        return level_pos(new_tile, new_local)
-
-    @staticmethod
-    def correct(pos: level_pos) -> level_pos:
-        new_tile = pos.unit_pos.copy()
-        new_local = pos.local_pos.copy()
-        if(not new_tile.x % 1 == 0):
-            decimal = new_tile.x % 1
-            new_tile.x -= decimal
-            new_local.x += decimal
-        if(not new_tile.y % 1 == 0):
-            decimal = new_tile.y % 1
-            new_tile.y -= decimal
-            new_local.y += decimal
-        if(not in_right_interval(new_local.x, 0, 1)):
-            dir = direction(new_local.x < 0)
-            new_tile.x -= dir
-            new_local.x += dir
-        if(not in_right_interval(new_local.y, 0, 1)):
-            dir = direction(new_local.y < 0)
-            new_tile.y -= dir
-            new_local.y += dir
-        return level_pos(new_tile, new_local)
-
-    @staticmethod
-    def from_vector2(pos: Vector2):
-        tile_pos = pos // 1
-        local_pos = pos - tile_pos
-        return level_pos(tile_pos, local_pos)
-
 def direction(statement: bool) -> int:
     return 2 * statement - 1
 
@@ -143,5 +89,11 @@ def vector2_div(dividend_vector: Vector2, divisor_vector: Vector2) -> Vector2:
 def vector2_mult(first_vector: Vector2, second_vector: Vector2) -> Vector2:
     return Vector2(first_vector.x * second_vector.x, first_vector.y * second_vector.y)
 
-def vector2_add_num(vector: Vector2, num: float) -> Vector2:
-    return Vector2(vector.x + num, vector.y + num)
+def trunc_vector2(vector: Vector2) -> Vector2:
+    return Vector2(int(vector.x), int(vector.y))
+
+def abs_vector2(vector: Vector2) -> Vector2:
+    return Vector2(abs(vector.x), abs(vector.y))
+
+def round_vector2(vector: Vector2, digits: int = 0) -> Vector2:
+    return Vector2(round(vector.x, digits), round(vector.y, digits))

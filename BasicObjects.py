@@ -80,7 +80,7 @@ class BasicSprite(pygame.sprite.Sprite):
         pass
 
 class LevelSprite(BasicSprite):
-    def __init__(self, sprite_path, level_pos, level_size, game):
+    def __init__(self, sprite_path, level_size, level_pos, game):
         screen_pos = game.level.convert_unit_vector(level_pos, False)
         screen_size = game.level.convert_unit_vector(level_size, False)
         super().__init__(sprite_path, screen_pos, screen_size, game)

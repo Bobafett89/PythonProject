@@ -6,7 +6,7 @@ from math import ceil
 
 class Character(LevelSprite):
     from Game import Game_manager
-    def __init__(self, sprite_path: str, pos: Vector2, jump_dist: float, jump_height: float, jump_time: float, dash_dist: float, dash_time: float, game: Game_manager) -> None:
+    def __init__(self, sprite_path: str, size: Vector2, pos: Vector2, jump_dist: float, jump_height: float, jump_time: float, dash_dist: float, dash_time: float, game: Game_manager) -> None:
         from Physics import character_physics_controller as physics
         def convert_x(num: float) -> float:
             return game.level.convert_unit_vector(Vector2(num, 0)).x
@@ -19,7 +19,7 @@ class Character(LevelSprite):
         dash_speed = convert_x(dash_dist / dash_time) * fixed_delta
         screen_dash_dist = convert_x(dash_dist)
 
-        super().__init__(sprite_path, pos, Vector2(0.4, 0.8), game)
+        super().__init__(sprite_path, size, pos, game)
         self.PHYSICS: physics = physics(self, speed, jump_force, gravity, screen_dash_dist, dash_speed)
 
     def behaviour(self) -> None:
@@ -136,8 +136,8 @@ class TilemapLayer:
             
 class Finish(LevelSprite):
     from Game import Game_manager
-    def __init__(self, sprite_path: str | None, pos: Vector2, size: Vector2, game: Game_manager) -> None:
-        super().__init__(sprite_path, pos, size, game)
+    def __init__(self, sprite_path: str | None, size: Vector2, pos: Vector2, game: Game_manager) -> None:
+        super().__init__(sprite_path, size, pos, game)
 
     def fixed_step_behaviour(self) -> None:
         character = self.GAME.level.PLAYER
@@ -146,8 +146,8 @@ class Finish(LevelSprite):
 
 class Collectable(LevelSprite):
     from Game import Game_manager
-    def __init__(self, sprite_path: str | None, pos: Vector2, size: Vector2, diff: character_diff, game: Game_manager) -> None:
-        super().__init__(sprite_path, pos, size, game)
+    def __init__(self, sprite_path: str | None, size: Vector2, pos: Vector2, diff: character_diff, game: Game_manager) -> None:
+        super().__init__(sprite_path, size, pos, game)
         self.DIFF: character_diff = diff
         self.is_collected: bool = False
 
@@ -164,8 +164,8 @@ class Collectable(LevelSprite):
 
 class MovingCollectable(Collectable):
     from Game import Game_manager
-    def __init__(self, sprite_path: str | None, pos: Vector2, size: Vector2, diff: character_diff, speed: float, destination: Vector2, game: Game_manager) -> None:
-        super().__init__(sprite_path, pos, size, diff, game)
+    def __init__(self, sprite_path: str | None, size: Vector2, pos: Vector2, diff: character_diff, speed: float, destination: Vector2, game: Game_manager) -> None:
+        super().__init__(sprite_path, size, pos, diff, game)
         screen_speed = self.GAME.level.convert_unit_vector(Vector2(speed, 0)).x
         self.SPEED: float = screen_speed * self.GAME.FRAME.FIXED_DELTA_TIME
         self.START: Vector2 = self.pos.copy()

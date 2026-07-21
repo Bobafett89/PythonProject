@@ -60,7 +60,7 @@ class Game_manager:
                 except RuntimeError:
                     raise RuntimeError("Json has wrong structure")
                 else:
-                    self._start_level(generator, level_structure["size_factor"], Vector2(level_structure["tiles"]))
+                    self._start_level(generator, level_structure["size_factor"], Vector2(level_structure["tilemap_size"]))
             
     def _start_level(self, generator: Callable[[Game_manager], None], size_factor: int, tilemap_size: Vector2) -> None:
         self.level = Level(generator, size_factor, tilemap_size, self)
@@ -238,11 +238,11 @@ class Level:
             char = level_struct["char"]
             jump = char["jump"]
             dash = char["dash"]
-            ground = level_struct["grnd"]
-            hazard = level_struct["hzrd"]
+            ground = level_struct["tiles"]["grnd"]
+            hazard = level_struct["tiles"]["hzrd"]
             finishes = level_struct["finishes"]
-            static_items = level_struct["coll"]
-            moving_items = level_struct["mov_coll"]
+            static_items = level_struct["items"]["stc"]
+            moving_items = level_struct["items"]["mov"]
 
             char_pos = point_to_vector(char["pos"])
             char_size = point_to_vector(char["size"])
@@ -275,9 +275,9 @@ class Level:
         
         valid_size_factor = has_keys("size_factor", level_struct, int)
 
-        valid_tiles = has_keys("tiles", level_struct, list) and validate_point(level_struct["tiles"], True)
+        valid_tiles = has_keys("tilemap_size", level_struct, list) and validate_point(level_struct["tilemap_size"], True)
 
-        valid_char = has_keys(["char"], level_struct, dict)
+        valid_char = has_keys("char", level_struct, dict)
         if(valid_char):
             char = level_struct["char"]
             valid_sprite = has_sprite(char)
@@ -287,9 +287,11 @@ class Level:
             valid_dash = has_keys("dash", char, dict) and has_keys(["dist", "time", "temp", "def"], char["dash"], (int, float))
             valid_char = valid_sprite and valid_size and valid_pos and valid_jump and valid_dash
 
-        valid_ground = has_keys(["grnd"], level_struct, list) and validate_list(level_struct["grnd"], 0, dict) and validate_tilemap(level_struct["grnd"])
-
-        valid_hazard = has_keys(["hzrd"], level_struct, list) and validate_list(level_struct["hzrd"], 0, dict) and validate_tilemap(level_struct["hzrd"])
+        tiles = dict()
+        if(has_keys("tiles", level_struct, dict)):
+            tiles = level_struct["tiles"]
+        valid_ground = has_keys("grnd", tiles, list) and validate_list(tiles["grnd"], 0, dict) and validate_tilemap(tiles["grnd"])
+        valid_hazard = has_keys("hzrd", tiles, list) and validate_list(tiles["hzrd"], 0, dict) and validate_tilemap(tiles["hzrd"])
 
         valid_finishes = has_keys("finishes", level_struct, list) and validate_list(level_struct["finishes"], 0, dict)
         valid_finishes = valid_finishes and len(level_struct["finishes"]) > 0
@@ -302,9 +304,13 @@ class Level:
                 if(not valid_finishes):
                     break
 
-        valid_static_items = has_keys("coll", level_struct, list) and validate_list(level_struct["coll"], 0, dict)
+        items = dict()
+        if(has_keys("items", level_struct, dict)):
+            items = level_struct["items"]
+
+        valid_static_items = has_keys("stc", items, list) and validate_list(items["stc"], 0, dict)
         if(valid_static_items):
-            for item in level_struct["coll"]:
+            for item in items["stc"]:
                 valid_sprite = has_sprite(item)
                 valid_size = has_valid_size(item)
                 valid_diff = has_keys("diff", item, list) and validate_list(item["diff"], 4, int)
@@ -313,9 +319,9 @@ class Level:
                 if(not valid_static_items):
                     break
 
-        valid_moving_items = has_keys("mov_coll", level_struct, list) and validate_list(level_struct["mov_coll"], 0, dict)
+        valid_moving_items = has_keys("mov", items, list) and validate_list(items["mov"], 0, dict)
         if(valid_moving_items):
-            for item in level_struct["mov_coll"]:
+            for item in items["mov"]:
                 valid_sprite = has_sprite(item)
                 valid_size = has_valid_size(item)
                 valid_diff = has_keys("diff", item, list) and validate_list(item["diff"], 4, int)

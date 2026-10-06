@@ -1,3 +1,4 @@
+```mermaid
 classDiagram
 	GameManager *-- UI
 	GameManager *-- Frame
@@ -213,3 +214,4 @@ classDiagram
 		+size: pygame.Vector2
 		+tile_size: pygame.Vector2
 	}
+```

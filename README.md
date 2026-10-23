@@ -1,4 +1,44 @@
+# План рефакторинга (модуль 1-4)
+
+## Модуль 1
+1) Настроить ENV и добавить Requirements
+2) Сокрыть ненужные для внешнего пользования функции и свойства
+3) Добавить README.md
+
+## Модуль 2
+1) Сделать BasicSprite и LevelSprite абстрактными
+2) Попытаться выделить dataclass'ы
+3) Попытаться добавить протоколы
+4) Добавить Mixin
+5) Добавить slots
+
+## Модуль 3
+1) Single responsibility:
+	1) UI знает о Frame и зависит от него - UI должен хранить, что надо рендерить, а GameManager передаёт это в Frame
+	2) Level отслеживает фиксированные шаги сам вместо Frame - перенести фикс. шаги в Frame
+	3) TilemapLayer и TilemapInfo хранятся отдельно, хотя отвечают оба отвечают за один концепт - объединить в один объект Tilemap
+	2) Open-close
+3) Liskov substitution
+4) Interface segregation
+5) Dependancy inversion
+	1) Level хранит отдельно информацию об игроке для других объектов - Level хранит массив объектов, объекты знают об этом массивы и отбирают оттуда объекты с которыми могут взаимодествовать
+	2) Объекты обращаются к уровню через GameManager - см. пункт 1
+	3) Character получает доступ к TilemapLayer через GameManager - в Character передаются TilemapLayer
+
+## Модуль 4
+1) Добавить ограничение на delta_time
+2) Выделить компоненты (например, местоположение)
+3) Выделить систему движения
+
+# Диаграмма классов
 ```mermaid
+---
+title: UML class diagram
+config:
+  layout: elk
+  class:
+    hideEmptyMembersBox: true
+---
 classDiagram
 	GameManager *-- UI
 	GameManager *-- Frame
@@ -119,8 +159,7 @@ classDiagram
 		+behaviour() None
 		+fixed_step_behaviour()
 	}
-	class LevelSprite {
-	}
+	class LevelSprite
 	class Character {
 		+PHYSICS: character_physics_controller
 		+death_check() None
@@ -139,8 +178,7 @@ classDiagram
 		+getTile() BasicSprite | None
 		+collides() List~BasicSprite~
 	}
-	class Finish {
-	}
+	class Finish
 	class Collectable {
 		+DIFF: character_diff
 		+is_collected: bool

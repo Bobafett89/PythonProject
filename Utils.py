@@ -5,6 +5,7 @@ from typing import Any
 
 class Command(Enum):
     WAIT = auto()
+    OPEN_MENU = auto()
     SWITCH_UI = auto()
     OPEN_LEVEL = auto()
     RESTART_LEVEL = auto()
@@ -19,23 +20,27 @@ class Control:
     @staticmethod
     def wait() -> Control:
         return Control(Command.WAIT, None)
-    
+
+    @staticmethod
+    def open_menu() -> Control:
+        return Control(Command.OPEN_MENU, None)
+
     @staticmethod
     def switch_ui(screen: UI_Screen) -> Control:
         return Control(Command.SWITCH_UI, screen)
-    
+
     @staticmethod
     def open_level(level_name: str) -> Control:
         return Control(Command.OPEN_LEVEL, level_name)
-    
+
     @staticmethod
     def restart_level() -> Control:
         return Control(Command.RESTART_LEVEL, None)
-    
+
     @staticmethod
     def close_level() -> Control:
         return Control(Command.CLOSE_LEVEL, None)
-    
+
     @staticmethod
     def close_game() -> Control:
         return Control(Command.CLOSE_GAME, None)

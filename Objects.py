@@ -5,21 +5,21 @@ from Utils import character_diff, Control, in_right_interval, direction, trunc_v
 from math import ceil
 
 class Character(LevelSprite):
-    from Game import Game_manager
-    def __init__(self, sprite_path: str, size: Vector2, pos: Vector2, jump_dist: float, jump_height: float, jump_time: float, dash_dist: float, dash_time: float, game: Game_manager) -> None:
+    def __init__(self, sprite_path: str, size: Vector2, pos: Vector2, jump_dist: float, jump_height: float, jump_time: float, dash_dist: float, dash_time: float) -> None:
+        from Game import GAME
         from Physics import character_physics_controller as physics
         def convert_x(num: float) -> float:
-            return game.level.convert_unit_vector(Vector2(num, 0)).x
+            return GAME._level.convert_unit_vector(Vector2(num, 0)).x
         def convert_y(num: float) -> float:
-            return game.level.convert_unit_vector(Vector2(0, num)).y
-        fixed_delta = game.FRAME.fixed_dt
+            return GAME._level.convert_unit_vector(Vector2(0, num)).y
+        fixed_delta = GAME.fixed_dt()
         jump_force = convert_y(2 * jump_height / jump_time) * fixed_delta
         gravity = convert_y((2 * jump_height / jump_time) / jump_time) * (fixed_delta ** 2)
         speed = convert_x(jump_dist / (2 * jump_time)) * fixed_delta
         dash_speed = convert_x(dash_dist / dash_time) * fixed_delta
         screen_dash_dist = convert_x(dash_dist)
 
-        super().__init__(sprite_path, size, pos, game)
+        super().__init__(sprite_path, size, pos)
         self.PHYSICS: physics = physics(self, speed, jump_force, gravity, screen_dash_dist, dash_speed)
 
     def behaviour(self) -> None:
@@ -51,9 +51,10 @@ class Character(LevelSprite):
         self.death_check()
 
     def death_check(self) -> None:
-        hazard_contacts = self.GAME.level.HAZARD.collides(self, False)
+        from Game import GAME
+        hazard_contacts = GAME._level.HAZARD.collides(self, False)
         if(len(hazard_contacts) > 0):
-            self.GAME.set_command(Control.restart_level())
+            GAME.set_command(Control.restart_level())
 
     def give_air_jumps(self, count: int) -> None:
         self.PHYSICS.JUMP.air_jumps += count
@@ -79,10 +80,7 @@ class Character(LevelSprite):
            self.increase_dashes(1)
 
 class TilemapLayer:
-    from Game import Game_manager
-    def __init__(self, game: Game_manager) -> None:
-        from Game import Game_manager
-        self.GAME: Game_manager = game
+    def __init__(self) -> None:
         self.SPRITES: pygame.sprite.Group = pygame.sprite.Group()
         self.MAP: list[list[BasicSprite]] = []
         for i in range(int(self.SIZE.x)):
@@ -92,22 +90,27 @@ class TilemapLayer:
 
     @property
     def SIZE(self) -> Vector2:
-        return self.GAME.level.TILEMAP.size
+        from Game import GAME
+        return GAME._level.TILEMAP.size
 
     @property
     def TILE_SIZE(self) -> Vector2:
-        return self.GAME.level.TILEMAP.tile_size
+        from Game import GAME
+        return GAME._level.TILEMAP.tile_size
 
     def convert_to_screen(self, pos: Vector2) -> Vector2:
-        return self.GAME.level.convert_tilemap_vector(pos)
+        from Game import GAME
+        return GAME._level.convert_tilemap_vector(pos)
 
     def convert_to_tilemap(self, pos: Vector2) -> Vector2:
-        return self.GAME.level.convert_tilemap_vector(pos, True)
+        from Game import GAME
+        return GAME._level.convert_tilemap_vector(pos, True)
 
     def addTile(self, sprite_path: str, tile_pos: Vector2) -> None:
+        from Game import GAME
         if(self.MAP[int(tile_pos.x)][int(tile_pos.y)] == None):
             pos = self.convert_to_screen(tile_pos + Vector2(0.5, 0.5))
-            tile = BasicSprite(sprite_path, pos, self.TILE_SIZE, self.GAME)
+            tile = BasicSprite(sprite_path, pos, self.TILE_SIZE)
             self.SPRITES.add(tile)
             self.MAP[int(tile_pos.x)][int(tile_pos.y)] = tile
 
@@ -117,7 +120,7 @@ class TilemapLayer:
         else:
             if(pseudo_tile):
                 pos = self.convert_to_screen(tile_pos + Vector2(0.5, 0.5))
-                return BasicSprite(None, pos, self.TILE_SIZE, self.GAME)
+                return BasicSprite(None, pos, self.TILE_SIZE)
             else:
                 return None
 
@@ -135,24 +138,24 @@ class TilemapLayer:
         return collisions
 
 class Finish(LevelSprite):
-    from Game import Game_manager
-    def __init__(self, sprite_path: str | None, size: Vector2, pos: Vector2, game: Game_manager) -> None:
-        super().__init__(sprite_path, size, pos, game)
+    def __init__(self, sprite_path: str | None, size: Vector2, pos: Vector2) -> None:
+        super().__init__(sprite_path, size, pos)
 
     def fixed_step_behaviour(self) -> None:
-        character = self.GAME.level.PLAYER
+        from Game import GAME
+        character = GAME._level.PLAYER
         if(self.overlap(character)):
-            self.GAME.set_command(Control.close_level())
+            GAME.set_command(Control.close_level())
 
 class Collectable(LevelSprite):
-    from Game import Game_manager
-    def __init__(self, sprite_path: str | None, size: Vector2, pos: Vector2, diff: character_diff, game: Game_manager) -> None:
-        super().__init__(sprite_path, size, pos, game)
+    def __init__(self, sprite_path: str | None, size: Vector2, pos: Vector2, diff: character_diff) -> None:
+        super().__init__(sprite_path, size, pos)
         self.DIFF: character_diff = diff
         self.is_collected: bool = False
 
     def fixed_step_behaviour(self) -> None:
-        character = self.GAME.level.PLAYER
+        from Game import GAME
+        character = GAME._level.PLAYER
         collide_with_character = self.overlap(character)
         if(collide_with_character and not self.is_collected):
             character.give_air_jumps(self.DIFF.air_jumps)
@@ -160,16 +163,16 @@ class Collectable(LevelSprite):
             character.give_dashes(self.DIFF.dashes)
             character.increase_dashes(self.DIFF.def_dashes)
             self.is_collected = True
-            self.GAME.level.collect_object(self)
+            GAME._level.collect_object(self)
 
 class MovingCollectable(Collectable):
-    from Game import Game_manager
-    def __init__(self, sprite_path: str | None, size: Vector2, pos: Vector2, diff: character_diff, speed: float, destination: Vector2, game: Game_manager) -> None:
-        super().__init__(sprite_path, size, pos, diff, game)
-        screen_speed = self.GAME.level.convert_unit_vector(Vector2(speed, 0)).x
-        self.SPEED: float = screen_speed * self.GAME.FRAME.fixed_dt
+    def __init__(self, sprite_path: str | None, size: Vector2, pos: Vector2, diff: character_diff, speed: float, destination: Vector2) -> None:
+        from Game import GAME
+        super().__init__(sprite_path, size, pos, diff)
+        screen_speed = GAME._level.convert_unit_vector(Vector2(speed, 0)).x
+        self.SPEED: float = screen_speed * GAME.fixed_dt()
         self.START: Vector2 = self.pos.copy()
-        self.DESTINATION: Vector2 = game.level.convert_unit_vector(destination)
+        self.DESTINATION: Vector2 = GAME._level.convert_unit_vector(destination)
         self.DIR: Vector2 = (self.DESTINATION - self.START).normalize()
         self.to_end: bool = True
 

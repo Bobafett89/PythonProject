@@ -4,19 +4,12 @@ from Utils import vector2_mult, round_vector2, abs_vector2
 from os import path
 
 class BasicSprite(pygame.sprite.Sprite):
-    from Game import Game_manager
-    def __init__(self, sprite_path: str | None, screen_pos: Vector2, screen_size: Vector2, game: Game_manager) -> None:
-        from Game import Game_manager
+    def __init__(self, sprite_path: str | None, screen_pos: Vector2, screen_size: Vector2) -> None:
         super().__init__()
-        self.GAME: Game_manager = game
         self.pos: Vector2 = screen_pos
         self.size: Vector2 = screen_size
 
         self.load_image(sprite_path)
-
-    @property
-    def SCREEN_SIZE(self) -> Vector2:
-        return self.GAME.FRAME.screen_size
 
     @property
     def edge_offset(self) -> Vector2:
@@ -25,13 +18,14 @@ class BasicSprite(pygame.sprite.Sprite):
     @property
     def topleft(self) -> Vector2:
         return self.pos - self.edge_offset
-    
+
     @property
     def botright(self) -> Vector2:
         return self.pos + self.edge_offset
 
     def set_center(self) -> None:
-        pos = round_vector2(vector2_mult(self.pos, self.SCREEN_SIZE))
+        from Game import GAME
+        pos = round_vector2(vector2_mult(self.pos, GAME.screen_size()))
         self.rect = self.rect.move_to(center=pos)
 
     def move_to(self, new_pos: Vector2) -> None:
@@ -42,7 +36,8 @@ class BasicSprite(pygame.sprite.Sprite):
         self.move_to(self.pos + offset)
 
     def rescale(self) -> None:
-        size = round_vector2(vector2_mult(self.size, self.SCREEN_SIZE))
+        from Game import GAME
+        size = round_vector2(vector2_mult(self.size, GAME.screen_size()))
         self.image = pygame.transform.scale(self.image, size)
         self.rect = self.image.get_rect()
         self.set_center()
@@ -67,7 +62,7 @@ class BasicSprite(pygame.sprite.Sprite):
             img = pygame.Surface(Vector2(0, 0))
             img.fill("black")
         self.set_image(img)
-    
+
     def overlap(self, other: type[BasicSprite]) -> bool:
         dist = abs_vector2(self.pos - other.pos)
         min_dist = self.edge_offset + other.edge_offset
@@ -80,7 +75,8 @@ class BasicSprite(pygame.sprite.Sprite):
         pass
 
 class LevelSprite(BasicSprite):
-    def __init__(self, sprite_path, level_size, level_pos, game):
-        screen_pos = game.level.convert_unit_vector(level_pos, False)
-        screen_size = game.level.convert_unit_vector(level_size, False)
-        super().__init__(sprite_path, screen_pos, screen_size, game)
+    def __init__(self, sprite_path, level_size, level_pos):
+        from Game import GAME
+        screen_pos = GAME._level.convert_unit_vector(level_pos, False)
+        screen_size = GAME._level.convert_unit_vector(level_size, False)
+        super().__init__(sprite_path, screen_pos, screen_size)

@@ -2,7 +2,6 @@ from pygame import Vector2
 from Utils import jump_struct, dash_struct, direction, abs_vector2
 
 class character_physics_controller:
-        from Game import Game_manager
         from Objects import Character
         def __init__(self, char: Character, speed: float, jump_force: float, gravity: float, dash_dist: float, dash_speed: float) -> None:
             from Objects import Character
@@ -14,11 +13,8 @@ class character_physics_controller:
             self.CHAR: Character = char
             self.dir: float = 1
 
-        @property
-        def GAME(self) -> Game_manager:
-            return self.CHAR.GAME
-
         def collide(self) -> None:
+            from Game import GAME
             from BasicObjects import BasicSprite
             def hit_floor() -> None:
                 if(self.VELOCITY.y > 0):
@@ -33,12 +29,12 @@ class character_physics_controller:
                 self.DASH.destination = None
 
             def next_state() -> BasicSprite:
-                return BasicSprite(None, self.CHAR.pos + self.VELOCITY, self.CHAR.size, self.GAME)
+                return BasicSprite(None, self.CHAR.pos + self.VELOCITY, self.CHAR.size)
 
             if(self.VELOCITY.y != 0):
                 self.JUMP.on_ground = False
             new_state = next_state()
-            tiles = self.GAME.level.GROUND.collides(new_state, True)
+            tiles = GAME._level.GROUND.collides(new_state, True)
             tiles.sort(key=(lambda tile: (tile.pos - self.CHAR.pos).length()))
             for tile in tiles:
                 min_dist = self.CHAR.edge_offset + tile.edge_offset
@@ -56,7 +52,7 @@ class character_physics_controller:
                         hit_wall()
                     self.VELOCITY += offset
                     new_state = next_state()
-                
+
         def apply_grav(self) -> None:
             if(not self.DASH.is_active):
                 self.VELOCITY.y += self.GRAVITY

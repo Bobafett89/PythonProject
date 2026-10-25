@@ -14,6 +14,26 @@ class GAME:
     _control: Control = None
 
     @classmethod
+    def active(cls) -> bool:
+        return cls._active
+
+    @classmethod
+    def screen_size(cls) -> Vector2:
+        return cls._FRAME.screen_size
+
+    @classmethod
+    def dt(csl) -> float:
+        return cls._FRAME.dt
+
+    @classmethod
+    def fixed_dt(cls) -> float:
+        return cls._FRAME.fixed_dt
+
+    @classmethod
+    def fixed_steps(cls) -> int:
+        return cls._FRAME.fixed_steps
+
+    @classmethod
     def init(cls) -> None:
         cls._active: bool = False
         cls._FRAME: Frame = Frame()
@@ -36,6 +56,8 @@ class GAME:
         match cls._control.command:
             case Command.WAIT:
                 pass
+            case Command.OPEN_MENU:
+                cls._open_main_menu()
             case Command.SWITCH_UI:
                 cls._FRAME.remove_sprite_group(cls._UI.current_screen.SPRITES)
                 cls._UI.switch_ui(cls._control.parameter)
@@ -52,6 +74,13 @@ class GAME:
             case Command.CLOSE_GAME:
                 cls._close_game()
         cls._control = Control.wait()
+
+    @classmethod
+    def update(cls) -> None:
+        if (cls._UI.current_screen != None):
+            cls._UI.current_screen.press_buttons()
+        if (cls._level != None):
+            cls._level.logic()
 
     @classmethod
     def _start_level_from_file(cls, level_name: str) -> None:
@@ -77,13 +106,13 @@ class GAME:
 
     @classmethod
     def _start_level(cls, generator: Callable[[Game_manager], None], size_factor: int, tilemap_size: Vector2) -> None:
-        cls.level = Level(generator, size_factor, tilemap_size, cls)
-        cls.level.build_level()
-        cls.UI.clear_ui()
-        cls.FRAME.clear_sprite_group()
-        cls.FRAME.add_sprite_group(cls._level.SPRITES)
-        cls.FRAME.add_sprite_group(cls._level.GROUND.SPRITES)
-        cls.FRAME.add_sprite_group(cls._level.HAZARD.SPRITES)
+        cls._level = Level(generator, size_factor, tilemap_size)
+        cls._level.build_level()
+        cls._UI.clear_ui()
+        cls._FRAME.clear_sprite_group()
+        cls._FRAME.add_sprite_group(cls._level.SPRITES)
+        cls._FRAME.add_sprite_group(cls._level.GROUND.SPRITES)
+        cls._FRAME.add_sprite_group(cls._level.HAZARD.SPRITES)
 
     @classmethod
     def _close_level(cls) -> None:
@@ -99,11 +128,11 @@ class GAME:
     def _open_main_menu(cls) -> None:
         cls._FRAME.clear_sprite_group()
         cls._UI.open_start_menu()
-        cls._FRAME.add_sprite_group(self.UI.current_screen.SPRITES)
+        cls._FRAME.add_sprite_group(cls._UI.current_screen.SPRITES)
 
     @classmethod
-    def _close_game(self) -> None:
-        self.is_running = False
+    def _close_game(cls) -> None:
+        cls._active = False
 
 class UI:
     from UI import UI_Screen
@@ -183,15 +212,14 @@ class Frame:
 class Level:
     from Objects import TilemapLayer, Character, Collectable, Finish
     from BasicObjects import BasicSprite
-    def __init__(self, generator: Callable[[Game_manager], None], size_factor: float, tilemap_size: Vector2, game: Game_manager) -> None:
+    def __init__(self, generator: Callable[[Game_manager], None], size_factor: float, tilemap_size: Vector2) -> None:
         from Objects import TilemapLayer, Character
         from BasicObjects import BasicSprite
-        self.GAME: Game_manager = game
         self.SPRITES: pygame.sprite.Group = pygame.sprite.Group()
         self.GENERATOR: Callable[[Game_manager], None] = generator
         self.SIZE_FACTOR: float = size_factor
         self.UNITS: Vector2 = Vector2(16, 9) * self.SIZE_FACTOR
-        self.UNIT_PIXEL_SIZE: float = self.GAME.FRAME.screen_size.x / self.UNITS.x
+        self.UNIT_PIXEL_SIZE: float = GAME.screen_size().x / self.UNITS.x
         self.TILEMAP: tilemap_info = tilemap_info(tilemap_size, vector2_div(Vector2(1, 1), tilemap_size))
         self.GROUND: TilemapLayer = None
         self.HAZARD: TilemapLayer = None
@@ -264,7 +292,7 @@ class Level:
                     break
             return valid_tilemap
 
-        def generator(game: Game_manager) -> None:
+        def generator() -> None:
             def point_to_vector(point: list[float | int]):
                 return Vector2(point[0], point[1])
 
@@ -285,7 +313,7 @@ class Level:
                             tile_pos = point_to_vector(pos)
                             add_tile(tile["spr"], tile_pos)
 
-            level = game.level
+            level = GAME._level
             char = level_struct["char"]
             jump = char["jump"]
             dash = char["dash"]
@@ -410,14 +438,14 @@ class Level:
         from Objects import TilemapLayer
         if(self.GROUND != None):
             raise RuntimeError("The level was already built.")
-        self.GROUND = TilemapLayer(self.GAME)
-        self.HAZARD = TilemapLayer(self.GAME)
-        self.GENERATOR(self.GAME)
+        self.GROUND = TilemapLayer()
+        self.HAZARD = TilemapLayer()
+        self.GENERATOR()
 
     def logic(self) -> None:
         for object in self.OBJECTS:
             object.behaviour()
-        for i in range(self.GAME.FRAME.fixed_steps):
+        for i in range(GAME.fixed_steps()):
             for object in self.OBJECTS:
                 object.fixed_step_behaviour()
         self.remove_collected_objects()
@@ -433,25 +461,25 @@ class Level:
         from Objects import Character
         if(self.PLAYER != None):
             raise RuntimeError("More than one character can't be spawned")
-        self.PLAYER = Character(sprite_path, size, pos, jump_dist, jump_height, jump_time, dash_dist, dash_time, self.GAME)
+        self.PLAYER = Character(sprite_path, size, pos, jump_dist, jump_height, jump_time, dash_dist, dash_time)
         self.OBJECTS.append(self.PLAYER)
         self.SPRITES.add(self.PLAYER)
 
     def add_finish(self, sprite_path: str, size: Vector2, pos: Vector2) -> None:
         from Objects import Finish
-        finish = Finish(sprite_path, size, pos, self.GAME)
+        finish = Finish(sprite_path, size, pos)
         self.OBJECTS.append(finish)
         self.SPRITES.add(finish)
 
     def add_static_item(self, sprite_path: str, size: Vector2, pos: Vector2, diff: character_diff) -> None:
         from Objects import Collectable
-        collectable = Collectable(sprite_path, size, pos, diff, self.GAME)
+        collectable = Collectable(sprite_path, size, pos, diff)
         self.OBJECTS.append(collectable)
         self.SPRITES.add(collectable)
 
     def add_moving_item(self, sprite_path: str, size: Vector2, pos: Vector2, diff: character_diff, speed: float, destination: Vector2) -> None:
         from Objects import MovingCollectable
-        collectable = MovingCollectable(sprite_path, size, pos, diff, speed, destination, self.GAME)
+        collectable = MovingCollectable(sprite_path, size, pos, diff, speed, destination)
         self.OBJECTS.append(collectable)
         self.SPRITES.add(collectable)
 

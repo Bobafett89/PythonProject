@@ -1,25 +1,28 @@
 import pygame
 from pygame import Vector2
 from Utils import Control, vector2_div, vector2_mult
-from Game import Game_manager
+from Game import GAME
 from UI import UI_Screen
 from os import listdir
 from math import ceil
 
-def close_game(game: Game_manager) -> None:
-    game.set_command(Control.close_game())
+def close_game() -> None:
+    GAME.set_command(Control.close_game())
 
 def switch_to(screen: UI_Screen) -> function:
-    def change(game: Game_manager):
-        game.set_command(Control.switch_ui(screen))
+    def change() -> None:
+        GAME.set_command(Control.switch_ui(screen))
     return change
 
+def open_main_menu() -> None:
+    GAME.set_command(Control.open_menu())
+
 def load_level(level_path: str) -> function:
-    def start_level(game: Game_manager):
-        game.set_command(Control.open_level(level_path))
+    def start_level() -> None:
+        GAME.set_command(Control.open_level(level_path))
     return start_level
 
-def level_selection(game: Game_manager) -> UI_Screen:
+def level_selection() -> UI_Screen:
     files = listdir("Levels")
     files = list(filter(lambda file: file.endswith(".json"), files))
     grid = Vector2(5, 3)
@@ -35,7 +38,7 @@ def level_selection(game: Game_manager) -> UI_Screen:
     def calc_pos(grid_pos: Vector2) -> Vector2:
         return vector2_mult(grid_pos, grid_offset) + gap + button_size / 2
     for page in range(pages_count):
-        pages.append(UI_Screen(GAME))
+        pages.append(UI_Screen())
         for level_number in range(min(levels_per_page, len(files) - page * levels_per_page)):
             level = level_number + page * levels_per_page
             grid_pos = Vector2(level_number % grid.x, level_number // grid.x)
@@ -46,7 +49,7 @@ def level_selection(game: Game_manager) -> UI_Screen:
             text_pos = open_pos + Vector2(0, button_size.y / 2 + gap.y / 4)
             pages[page].add_text(level_name, text_pos, text_size)
         return_pos = Vector2(0.5, calc_pos(Vector2(0, grid.y - 1)).y)
-        pages[page].add_button("", return_pos, button_size, switch_to(game.UI.start_menu))
+        pages[page].add_button("", return_pos, button_size, open_main_menu)
     if(pages_count > 1):
         for page in range(len(pages)):
             if(page < len(pages) - 1):
@@ -59,17 +62,17 @@ def level_selection(game: Game_manager) -> UI_Screen:
                 pages[page].add_button("", back_pos, button_size, switch_to(pages[page-1]))
     return pages[0]
 
-def open_level_selection(game: Game_manager) -> None:
-    game.set_command(Control.switch_ui(level_selection(game)))
+def open_level_selection() -> None:
+    GAME.set_command(Control.switch_ui(level_selection()))
 
 pygame.init()
-GAME = Game_manager()
-menu = UI_Screen(GAME)
+GAME.init()
+menu = UI_Screen()
 menu.add_button("CharBlock.png", Vector2(0.5, 0.3), Vector2(0.5, 0.2), open_level_selection)
 menu.add_button("HazardBlock.png", Vector2(0.5, 0.7), Vector2(0.5, 0.2), close_game)
 GAME.start(menu)
 
-while GAME.is_running:
+while GAME.active():
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             GAME.set_command(Control.close_game())
@@ -80,12 +83,9 @@ while GAME.is_running:
             if(keys[pygame.K_END]):
                 GAME.set_command(Control.close_game())
 
-    if(GAME.UI.current_screen != None):
-        GAME.UI.press_buttons()
-    if(GAME.level != None):
-        GAME.level.logic()
+    GAME.update()
     GAME.execute_command()
-    GAME.FRAME.render()
-    GAME.FRAME.next()
+    GAME._FRAME.render()
+    GAME._FRAME.next()
 
 pygame.quit()

@@ -6,45 +6,55 @@ from os import path
 from json import loads, decoder
 from collections.abc import Callable
 
-class Game_manager:
-    def __init__(self) -> None:
-        self.is_running: bool = False
-        self.FRAME: Frame = Frame()
-        self.UI = UI(self)
-        self.level: Level = None
-        self.control: Control = Control.wait()
+class GAME:
+    _active: bool = None
+    _FRAME: Frame = None
+    _UI: UI = None
+    _level: Level = None
+    _control: Control = None
 
-    def start(self, start_menu: UIScreen) -> None:
-        self.UI.set_start_menu(start_menu)
-        self._open_main_menu()
-        self.is_running = True
+    @classmethod
+    def init(cls) -> None:
+        cls._active: bool = False
+        cls._FRAME: Frame = Frame()
+        cls._UI = UI()
+        cls._control: Control = Control.wait()
 
-    def set_command(self, command: Control) -> None:
-        if(command.command.value > self.control.command.value):
-            self.control = command
+    @classmethod
+    def start(cls, start_menu: UIScreen) -> None:
+        cls._UI.set_start_menu(start_menu)
+        cls._open_main_menu()
+        cls._active = True
 
-    def execute_command(self):
-        match self.control.command:
+    @classmethod
+    def set_command(cls, command: Control) -> None:
+        if(command.command.value > cls._control.command.value):
+            cls._control = command
+
+    @classmethod
+    def execute_command(cls) -> None:
+        match cls._control.command:
             case Command.WAIT:
                 pass
             case Command.SWITCH_UI:
-                self.FRAME.remove_sprite_group(self.UI.current_screen.SPRITES)
-                self.UI.switch_ui(self.control.parameter)
-                self.FRAME.add_sprite_group(self.UI.current_screen.SPRITES)
+                cls._FRAME.remove_sprite_group(cls._UI.current_screen.SPRITES)
+                cls._UI.switch_ui(cls._control.parameter)
+                cls._FRAME.add_sprite_group(cls._UI.current_screen.SPRITES)
             case Command.OPEN_LEVEL:
                 try:
-                    self._start_level_from_file(self.control.parameter)
+                    cls._start_level_from_file(cls._control.parameter)
                 except RuntimeError:
                     pass
             case Command.RESTART_LEVEL:
-                self._reset_level()
+                cls._reset_level()
             case Command.CLOSE_LEVEL:
-                self._close_level()
+                cls._close_level()
             case Command.CLOSE_GAME:
-                self._close_game()
-        self.control = Control.wait()
+                cls._close_game()
+        cls._control = Control.wait()
 
-    def _start_level_from_file(self, level_name: str) -> None:
+    @classmethod
+    def _start_level_from_file(cls, level_name: str) -> None:
         level_name = path.join("Levels", level_name)
         try:
             level_file = open(level_name)
@@ -63,30 +73,35 @@ class Game_manager:
                 except RuntimeError:
                     raise RuntimeError("Json has wrong structure")
                 else:
-                    self._start_level(generator, level_structure["size_factor"], Vector2(level_structure["tilemap_size"]))
-            
-    def _start_level(self, generator: Callable[[Game_manager], None], size_factor: int, tilemap_size: Vector2) -> None:
-        self.level = Level(generator, size_factor, tilemap_size, self)
-        self.level.build_level()
-        self.UI.clear_ui()
-        self.FRAME.clear_sprite_group()
-        self.FRAME.add_sprite_group(self.level.SPRITES)
-        self.FRAME.add_sprite_group(self.level.GROUND.SPRITES)
-        self.FRAME.add_sprite_group(self.level.HAZARD.SPRITES)
+                    cls._start_level(generator, level_structure["size_factor"], Vector2(level_structure["tilemap_size"]))
 
-    def _close_level(self) -> None:
-        self.level = None
-        self._open_main_menu()
+    @classmethod
+    def _start_level(cls, generator: Callable[[Game_manager], None], size_factor: int, tilemap_size: Vector2) -> None:
+        cls.level = Level(generator, size_factor, tilemap_size, cls)
+        cls.level.build_level()
+        cls.UI.clear_ui()
+        cls.FRAME.clear_sprite_group()
+        cls.FRAME.add_sprite_group(cls._level.SPRITES)
+        cls.FRAME.add_sprite_group(cls._level.GROUND.SPRITES)
+        cls.FRAME.add_sprite_group(cls._level.HAZARD.SPRITES)
 
-    def _reset_level(self) -> None:
-        level = self.level
-        self._start_level(level.GENERATOR, level.SIZE_FACTOR, level.TILEMAP.size)
+    @classmethod
+    def _close_level(cls) -> None:
+        cls._level = None
+        cls._open_main_menu()
 
-    def _open_main_menu(self) -> None:
-        self.FRAME.clear_sprite_group()
-        self.UI.open_start_menu()
-        self.FRAME.add_sprite_group(self.UI.current_screen.SPRITES)
+    @classmethod
+    def _reset_level(cls) -> None:
+        level = cls._level
+        cls._start_level(level.GENERATOR, level.SIZE_FACTOR, level.TILEMAP.size)
 
+    @classmethod
+    def _open_main_menu(cls) -> None:
+        cls._FRAME.clear_sprite_group()
+        cls._UI.open_start_menu()
+        cls._FRAME.add_sprite_group(self.UI.current_screen.SPRITES)
+
+    @classmethod
     def _close_game(self) -> None:
         self.is_running = False
 
@@ -132,7 +147,7 @@ class Frame:
     @property
     def screen_size(self) -> Vector2:
         return Vector2(self._SCREEN.get_size())
-    
+
     def __init__(self) -> None:
         screen_flags = pygame.FULLSCREEN | pygame.SCALED
         self._SCREEN: pygame.Surface = pygame.display.set_mode((1920, 1080), screen_flags)
@@ -197,7 +212,7 @@ class Level:
                         has = False
                         break
             return has
-            
+
         def has_sprite(where: dict):
             return has_keys("spr", where, str)
 
@@ -252,7 +267,7 @@ class Level:
         def generator(game: Game_manager) -> None:
             def point_to_vector(point: list[float | int]):
                 return Vector2(point[0], point[1])
-            
+
             def build_tilemap(tilemap: list[dict], add_tile: Callable[[str, Vector2], None]):
                 for tile in tilemap:
                     for pos in tile["pos"]:
@@ -308,7 +323,7 @@ class Level:
                     item_dest = point_to_vector(item["dest"][i])
                     item_diff = character_diff(item["diff"][0], item["diff"][1], item["diff"][2], item["diff"][3])
                     level.add_moving_item(item["spr"], item_size, item_pos, item_diff, item["speed"], item_dest)
-        
+
         valid_size_factor = has_keys("size_factor", level_struct, int)
 
         valid_tiles = has_keys("tilemap_size", level_struct, list) and validate_point(level_struct["tilemap_size"], True)
@@ -367,7 +382,7 @@ class Level:
                 valid_moving_items = valid_sprite and valid_diff and valid_pos and valid_speed and valid_dest
                 if(not valid_moving_items):
                     break
-        
+
         valid_tilemaps = valid_tiles and valid_ground and valid_hazard
         valid_items = valid_static_items and valid_moving_items
         if(not (valid_size_factor and valid_char and valid_tilemaps and valid_finishes and valid_items)):
@@ -410,7 +425,7 @@ class Level:
 
     def add_ground_tile(self, sprite_path: str, tile_pos: Vector2) -> None:
         self.GROUND.addTile(sprite_path, tile_pos)
-        
+
     def add_hazard_tile(self, sprite_path: str, tile_pos: Vector2) -> None:
         self.HAZARD.addTile(sprite_path, tile_pos)
 

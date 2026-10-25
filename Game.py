@@ -1,6 +1,7 @@
 import pygame
 from pygame import Vector2
-from Utils import character_diff, Control, Command, tilemap_info, vector2_div, vector2_mult
+from Utils import character_diff, Control, Command, tilemap_info, clamp, vector2_div, vector2_mult
+from math import floor
 from os import path
 from json import loads, decoder
 from collections.abc import Callable
@@ -15,7 +16,7 @@ class Game_manager:
 
     def start(self, start_menu: UIScreen) -> None:
         self.UI.set_start_menu(start_menu)
-        self.UI.open_start_menu()
+        self._open_main_menu()
         self.is_running = True
 
     def set_command(self, command: Control) -> None:
@@ -27,7 +28,9 @@ class Game_manager:
             case Command.WAIT:
                 pass
             case Command.SWITCH_UI:
+                self.FRAME.remove_sprite_group(self.UI.current_screen.SPRITES)
                 self.UI.switch_ui(self.control.parameter)
+                self.FRAME.add_sprite_group(self.UI.current_screen.SPRITES)
             case Command.OPEN_LEVEL:
                 try:
                     self._start_level_from_file(self.control.parameter)
@@ -66,30 +69,33 @@ class Game_manager:
         self.level = Level(generator, size_factor, tilemap_size, self)
         self.level.build_level()
         self.UI.clear_ui()
-        self.FRAME.RENDER_GROUPS.clear()
-        self.FRAME.RENDER_GROUPS.append(self.level.SPRITES)
-        self.FRAME.RENDER_GROUPS.append(self.level.GROUND.SPRITES)
-        self.FRAME.RENDER_GROUPS.append(self.level.HAZARD.SPRITES)
+        self.FRAME.clear_sprite_group()
+        self.FRAME.add_sprite_group(self.level.SPRITES)
+        self.FRAME.add_sprite_group(self.level.GROUND.SPRITES)
+        self.FRAME.add_sprite_group(self.level.HAZARD.SPRITES)
 
     def _close_level(self) -> None:
         self.level = None
-        self.FRAME.RENDER_GROUPS.clear()
-        self.UI.open_start_menu()
+        self._open_main_menu()
 
     def _reset_level(self) -> None:
         level = self.level
         self._start_level(level.GENERATOR, level.SIZE_FACTOR, level.TILEMAP.size)
+
+    def _open_main_menu(self) -> None:
+        self.FRAME.clear_sprite_group()
+        self.UI.open_start_menu()
+        self.FRAME.add_sprite_group(self.UI.current_screen.SPRITES)
 
     def _close_game(self) -> None:
         self.is_running = False
 
 class UI:
     from UI import UI_Screen
-    def __init__(self, game: Game_manager) -> None:
+    def __init__(self) -> None:
         from UI import UI_Screen
         self.start_menu: UI_Screen = None
         self.current_screen: UI_Screen = None
-        self.GAME: Game_manager = game
 
     def set_start_menu(self, start_menu: UI_Screen) -> None:
         self.start_menu = start_menu
@@ -100,33 +106,64 @@ class UI:
     def switch_ui(self, screen: UI_Screen) -> None:
         self.clear_ui()
         self.current_screen = screen
-        self.GAME.FRAME.RENDER_GROUPS.append(self.current_screen.SPRITES)
 
     def clear_ui(self) -> None:
-        if(self.current_screen != None and self.current_screen.SPRITES in self.GAME.FRAME.RENDER_GROUPS):
-            self.GAME.FRAME.RENDER_GROUPS.remove(self.current_screen.SPRITES)
         self.current_screen = None
 
     def press_buttons(self) -> None:
         self.current_screen.press_buttons()
 
 class Frame:
+    _FIXED_DT: float = 1 / 50
+    _MAX_DT: float = 1 / 30
+
+    @property
+    def dt(self) -> float:
+        return self._dt
+
+    @property
+    def fixed_dt(self) -> float:
+        return self._FIXED_DT
+
+    @property
+    def fixed_steps(self) -> int:
+        return self._fixed_steps
+
+    @property
+    def screen_size(self) -> Vector2:
+        return Vector2(self._SCREEN.get_size())
+    
     def __init__(self) -> None:
         screen_flags = pygame.FULLSCREEN | pygame.SCALED
-        self.SCREEN: pygame.Surface = pygame.display.set_mode((1536, 864), screen_flags)
-        self.CLOCK: pygame.Clock = pygame.time.Clock()
-        self.RENDER_GROUPS: list[pygame.sprite.Group] = []
-        self.delta_time: float = 0
-        self.FIXED_DELTA_TIME: float = 0.02
+        self._SCREEN: pygame.Surface = pygame.display.set_mode((1920, 1080), screen_flags)
+        self._CLOCK: pygame.Clock = pygame.time.Clock()
+        self._RENDER_GROUPS: list[pygame.sprite.Group] = []
+        self._dt: float = 0
+        self._acc_dt: float = 0
+        self._fixed_steps: int = 0
 
     def next(self) -> None:
-        self.delta_time = self.CLOCK.tick(1000) / 1000
+        self._dt = clamp(self._CLOCK.tick(1000) / 1000, 0, Frame._MAX_DT)
+        self._acc_dt += self._dt
+        self._fixed_steps = floor(self._acc_dt / self._FIXED_DT)
+        self._acc_dt -= Frame._FIXED_DT * self._fixed_steps
 
     def render(self) -> None:
-        self.SCREEN.fill("#333333")
-        for render_group in self.RENDER_GROUPS:
-            render_group.draw(self.SCREEN)
+        self._SCREEN.fill("#333333")
+        for render_group in self._RENDER_GROUPS:
+            render_group.draw(self._SCREEN)
         pygame.display.flip()
+
+    def add_sprite_group(self, group: pygame.sprite.Group) -> None:
+        if (group not in self._RENDER_GROUPS):
+            self._RENDER_GROUPS.append(group)
+
+    def remove_sprite_group(self, group: pygame.sprite.Group) -> None:
+        if (group in self._RENDER_GROUPS):
+            self._RENDER_GROUPS.remove(group)
+
+    def clear_sprite_group(self) -> None:
+        self._RENDER_GROUPS.clear()
 
 class Level:
     from Objects import TilemapLayer, Character, Collectable, Finish
@@ -139,14 +176,13 @@ class Level:
         self.GENERATOR: Callable[[Game_manager], None] = generator
         self.SIZE_FACTOR: float = size_factor
         self.UNITS: Vector2 = Vector2(16, 9) * self.SIZE_FACTOR
-        self.UNIT_PIXEL_SIZE: float = self.GAME.FRAME.SCREEN.width / self.UNITS.x
+        self.UNIT_PIXEL_SIZE: float = self.GAME.FRAME.screen_size.x / self.UNITS.x
         self.TILEMAP: tilemap_info = tilemap_info(tilemap_size, vector2_div(Vector2(1, 1), tilemap_size))
         self.GROUND: TilemapLayer = None
         self.HAZARD: TilemapLayer = None
         self.OBJECTS: list[type[BasicSprite]] = []
         self.COLLECTED: list[type[BasicSprite]] = []
         self.PLAYER: Character = None
-        self.acc_delta_time: float = 0
 
     @staticmethod
     def parse_level(level_struct: dict) -> Callable[[Game_manager], None]:
@@ -366,10 +402,7 @@ class Level:
     def logic(self) -> None:
         for object in self.OBJECTS:
             object.behaviour()
-        self.acc_delta_time += self.GAME.FRAME.delta_time
-        fixed_delta = self.GAME.FRAME.FIXED_DELTA_TIME
-        while self.acc_delta_time > fixed_delta:
-            self.acc_delta_time -= fixed_delta
+        for i in range(self.GAME.FRAME.fixed_steps):
             for object in self.OBJECTS:
                 object.fixed_step_behaviour()
         self.remove_collected_objects()

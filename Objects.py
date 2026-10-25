@@ -12,7 +12,7 @@ class Character(LevelSprite):
             return game.level.convert_unit_vector(Vector2(num, 0)).x
         def convert_y(num: float) -> float:
             return game.level.convert_unit_vector(Vector2(0, num)).y
-        fixed_delta = game.FRAME.FIXED_DELTA_TIME
+        fixed_delta = game.FRAME.fixed_dt
         jump_force = convert_y(2 * jump_height / jump_time) * fixed_delta
         gravity = convert_y((2 * jump_height / jump_time) / jump_time) * (fixed_delta ** 2)
         speed = convert_x(jump_dist / (2 * jump_time)) * fixed_delta
@@ -35,7 +35,7 @@ class Character(LevelSprite):
             self.PHYSICS.jump()
 
         self.__debug()
-    
+
     def fixed_step_behaviour(self):
         self.PHYSICS.apply_grav()
 
@@ -93,17 +93,17 @@ class TilemapLayer:
     @property
     def SIZE(self) -> Vector2:
         return self.GAME.level.TILEMAP.size
-    
+
     @property
     def TILE_SIZE(self) -> Vector2:
         return self.GAME.level.TILEMAP.tile_size
-    
+
     def convert_to_screen(self, pos: Vector2) -> Vector2:
         return self.GAME.level.convert_tilemap_vector(pos)
-    
+
     def convert_to_tilemap(self, pos: Vector2) -> Vector2:
         return self.GAME.level.convert_tilemap_vector(pos, True)
-    
+
     def addTile(self, sprite_path: str, tile_pos: Vector2) -> None:
         if(self.MAP[int(tile_pos.x)][int(tile_pos.y)] == None):
             pos = self.convert_to_screen(tile_pos + Vector2(0.5, 0.5))
@@ -114,7 +114,7 @@ class TilemapLayer:
     def getTile(self, tile_pos: Vector2, pseudo_tile: bool) -> BasicSprite | None:
         if(in_right_interval(tile_pos.x, 0, len(self.MAP)) and in_right_interval(tile_pos.y, 0, len(self.MAP[0]))):
             return self.MAP[int(tile_pos.x)][int(tile_pos.y)]
-        else: 
+        else:
             if(pseudo_tile):
                 pos = self.convert_to_screen(tile_pos + Vector2(0.5, 0.5))
                 return BasicSprite(None, pos, self.TILE_SIZE, self.GAME)
@@ -133,7 +133,7 @@ class TilemapLayer:
                 if(tile != None and tile.overlap(object)):
                     collisions.append(tile)
         return collisions
-            
+
 class Finish(LevelSprite):
     from Game import Game_manager
     def __init__(self, sprite_path: str | None, size: Vector2, pos: Vector2, game: Game_manager) -> None:
@@ -167,7 +167,7 @@ class MovingCollectable(Collectable):
     def __init__(self, sprite_path: str | None, size: Vector2, pos: Vector2, diff: character_diff, speed: float, destination: Vector2, game: Game_manager) -> None:
         super().__init__(sprite_path, size, pos, diff, game)
         screen_speed = self.GAME.level.convert_unit_vector(Vector2(speed, 0)).x
-        self.SPEED: float = screen_speed * self.GAME.FRAME.FIXED_DELTA_TIME
+        self.SPEED: float = screen_speed * self.GAME.FRAME.fixed_dt
         self.START: Vector2 = self.pos.copy()
         self.DESTINATION: Vector2 = game.level.convert_unit_vector(destination)
         self.DIR: Vector2 = (self.DESTINATION - self.START).normalize()

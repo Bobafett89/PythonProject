@@ -68,6 +68,9 @@ class tilemap_info:
     size: Vector2 = None
     tile_size: Vector2 = None
 
+def clamp(value: float, min_val: float, max_val: float):
+    return min(max_val, max(min_val, value))
+
 def direction(statement: bool) -> int:
     return 2 * statement - 1
 

@@ -16,7 +16,7 @@ class BasicSprite(pygame.sprite.Sprite):
 
     @property
     def SCREEN_SIZE(self) -> Vector2:
-        return Vector2(self.GAME.FRAME.SCREEN.size)
+        return self.GAME.FRAME.screen_size
 
     @property
     def edge_offset(self) -> Vector2:

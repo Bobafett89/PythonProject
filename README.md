@@ -14,8 +14,8 @@
 
 ## Модуль 3
 1) Single responsibility:
-	- [ ] UI знает о Frame и зависит от него - UI должен хранить, что надо рендерить, а GameManager передаёт это в Frame
-	- [ ] Level отслеживает фиксированные шаги сам вместо Frame - перенести фикс. шаги в Frame
+	- [x] UI знает о Frame и зависит от него - UI должен хранить, что надо рендерить, а GameManager передаёт это в Frame
+	- [x] Level отслеживает фиксированные шаги сам вместо Frame - перенести фикс. шаги в Frame
 	- [ ] TilemapLayer и TilemapInfo хранятся отдельно, хотя отвечают оба отвечают за один концепт - объединить в один объект Tilemap
 2) Open-close
 3) Liskov substitution
@@ -26,7 +26,7 @@
 	- [ ] Character получает доступ к TilemapLayer через GameManager - в Character передаются TilemapLayer
 
 ## Модуль 4
-- [ ] Добавить ограничение на delta_time
+- [x] Добавить ограничение на delta_time
 - [ ] Выделить компоненты (например, местоположение)
 - [ ] Выделить систему движения
 
@@ -80,12 +80,12 @@ classDiagram
 		-start_level() None
 		-close_level() None
 		-reset_level() None
+		-open_main_menu() None
 		-close_game() None
 	}
 	class UI {
 		+start_menu: UIScreen
 		+current_screen: UIScreen
-		+GAME: GameManager
 		+set_start_menu() None
 		+open_start_menu() None
 		+switchUI() None
@@ -93,13 +93,23 @@ classDiagram
 		+press_buttons() None
 	}
 	class Frame {
-		+SCREEN: pygame.Surface
-		+CLOCK: pygame.Clock
-		+RENDER_GROUPS: List~pygame.sprite.Group~
-		+delta_time: float
-		+FIXED_DELTA_TIME: float
+		-FIXED_DT: float = 1 / 50
+		-MAX_DT: float = 1 / 30
+		-SCREEN: pygame.Surface
+		-CLOCK: pygame.Clock
+		-RENDER_GROUPS: List~pygame.sprite.Group~
+		-dt: float
+		-acc_dt: float
+		-fixed_steps: int
+		+/dt: float
+		+/fixed_dt: float
+		+/fixed_steps: int
+		+/screen_size: pygame.Vector2
 		+next() None
 		+render() None
+		+add_sprite_group(group: pygame.sprite.Group) None
+		+remove_sprite_group(group: pygame.sprite.Group) None
+		+clear_sprite_group() None
 	}
 	class Level {
 		+GAME: GameManager

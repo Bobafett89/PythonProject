@@ -68,11 +68,6 @@ class character_diff:
     dashes: int = 0
     def_dashes: int = 0
 
-@dataclass
-class tilemap_info:
-    size: Vector2 = None
-    tile_size: Vector2 = None
-
 def clamp(value: float, min_val: float, max_val: float):
     return min(max_val, max(min_val, value))
 

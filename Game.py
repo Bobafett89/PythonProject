@@ -1,6 +1,6 @@
 import pygame
 from pygame import Vector2
-from Utils import character_diff, Control, Command, tilemap_info, clamp, vector2_div, vector2_mult
+from Utils import character_diff, Control, Command, clamp, vector2_div, vector2_mult
 from math import floor
 from os import path
 from json import loads, decoder
@@ -83,6 +83,11 @@ class GAME:
             cls._level.logic()
 
     @classmethod
+    def next_frame(cls) -> None:
+        cls._FRAME.render()
+        cls._FRAME.next()
+
+    @classmethod
     def _start_level_from_file(cls, level_name: str) -> None:
         level_name = path.join("Levels", level_name)
         try:
@@ -102,17 +107,16 @@ class GAME:
                 except RuntimeError:
                     raise RuntimeError("Json has wrong structure")
                 else:
-                    cls._start_level(generator, level_structure["size_factor"], Vector2(level_structure["tilemap_size"]))
+                    cls._start_level(generator, Vector2(level_structure["tilemap_size"]))
 
     @classmethod
-    def _start_level(cls, generator: Callable[[Game_manager], None], size_factor: int, tilemap_size: Vector2) -> None:
-        cls._level = Level(generator, size_factor, tilemap_size)
+    def _start_level(cls, generator: Callable[[], None], tilemap_size: Vector2) -> None:
+        cls._level = Level(generator, tilemap_size)
         cls._level.build_level()
         cls._UI.clear_ui()
         cls._FRAME.clear_sprite_group()
         cls._FRAME.add_sprite_group(cls._level.SPRITES)
-        cls._FRAME.add_sprite_group(cls._level.GROUND.SPRITES)
-        cls._FRAME.add_sprite_group(cls._level.HAZARD.SPRITES)
+        cls._FRAME.add_sprite_group(cls._level.TILEMAP.SPRITES)
 
     @classmethod
     def _close_level(cls) -> None:
@@ -122,7 +126,7 @@ class GAME:
     @classmethod
     def _reset_level(cls) -> None:
         level = cls._level
-        cls._start_level(level.GENERATOR, level.SIZE_FACTOR, level.TILEMAP.size)
+        cls._start_level(level.GENERATOR, level.TILEMAP.size)
 
     @classmethod
     def _open_main_menu(cls) -> None:
@@ -210,25 +214,21 @@ class Frame:
         self._RENDER_GROUPS.clear()
 
 class Level:
-    from Objects import TilemapLayer, Character, Collectable, Finish
-    from BasicObjects import BasicSprite
-    def __init__(self, generator: Callable[[Game_manager], None], size_factor: float, tilemap_size: Vector2) -> None:
-        from Objects import TilemapLayer, Character
+    _DEF_LEVEL_SIZE: Vector2 = Vector2(16, 9)
+
+    def __init__(self, generator: Callable[[], None], tilemap_size: Vector2) -> None:
+        from Objects import Tilemap, Character
         from BasicObjects import BasicSprite
         self.SPRITES: pygame.sprite.Group = pygame.sprite.Group()
-        self.GENERATOR: Callable[[Game_manager], None] = generator
-        self.SIZE_FACTOR: float = size_factor
-        self.UNITS: Vector2 = Vector2(16, 9) * self.SIZE_FACTOR
-        self.UNIT_PIXEL_SIZE: float = GAME.screen_size().x / self.UNITS.x
-        self.TILEMAP: tilemap_info = tilemap_info(tilemap_size, vector2_div(Vector2(1, 1), tilemap_size))
-        self.GROUND: TilemapLayer = None
-        self.HAZARD: TilemapLayer = None
+        self.GENERATOR: Callable[[], None] = generator
+        self.TILEMAP_LAYERS: dict[int] = dict(ground = 0, hazard = 1)
+        self.TILEMAP: Tilemap = Tilemap(tilemap_size)
         self.OBJECTS: list[type[BasicSprite]] = []
         self.COLLECTED: list[type[BasicSprite]] = []
         self.PLAYER: Character = None
 
-    @staticmethod
-    def parse_level(level_struct: dict) -> Callable[[Game_manager], None]:
+    @classmethod
+    def parse_level(cls, level_struct: dict) -> Callable[[], None]:
         def has_keys(keys: list[str] | str, where: dict, type: type | tuple[type, ...]) -> bool:
             has: bool = None
             if(isinstance(keys, str)):
@@ -292,7 +292,9 @@ class Level:
                     break
             return valid_tilemap
 
-        def generator() -> None:
+        def generator(level: Level) -> None:
+            level_size: Vector2 = cls._DEF_LEVEL_SIZE * level_struct["size_factor"]
+
             def point_to_vector(point: list[float | int]):
                 return Vector2(point[0], point[1])
 
@@ -313,7 +315,9 @@ class Level:
                             tile_pos = point_to_vector(pos)
                             add_tile(tile["spr"], tile_pos)
 
-            level = GAME._level
+            def to_screen_vector(level_vector: Vector2) -> Vector2:
+                return vector2_div(level_vector, level_size)
+
             char = level_struct["char"]
             jump = char["jump"]
             dash = char["dash"]
@@ -323,14 +327,14 @@ class Level:
             static_items = level_struct["items"]["stc"]
             moving_items = level_struct["items"]["mov"]
 
-            char_pos = point_to_vector(char["pos"])
-            char_size = point_to_vector(char["size"])
-            level.add_character(char["spr"], char_size, char_pos, jump["dist"], jump["height"], jump["time"], dash["dist"], dash["time"])
+            char_pos = to_screen_vector(point_to_vector(char["pos"]))
+            char_size = to_screen_vector(point_to_vector(char["size"]))
+            level.add_character(char["spr"], char_size, char_pos, jump["dist"] / level_size.x, jump["height"] / level_size.y, jump["time"], dash["dist"] / level_size.x, dash["time"])
 
             for finish in finishes:
                 for pos in finish["pos"]:
-                    finish_pos = point_to_vector(pos)
-                    finish_size = point_to_vector(finish["size"])
+                    finish_pos = to_screen_vector(point_to_vector(pos))
+                    finish_size = to_screen_vector(point_to_vector(finish["size"]))
                     level.add_finish(finish["spr"], finish_size, finish_pos)
 
             build_tilemap(ground, level.add_ground_tile)
@@ -339,18 +343,19 @@ class Level:
 
             for item in static_items:
                 for pos in item["pos"]:
-                    item_size = point_to_vector(item["size"])
-                    item_pos = point_to_vector(pos)
+                    item_size = to_screen_vector(point_to_vector(item["size"]))
+                    item_pos = to_screen_vector(point_to_vector(pos))
                     item_diff = character_diff(item["diff"][0], item["diff"][1], item["diff"][2], item["diff"][3])
                     level.add_static_item(item["spr"], item_size, item_pos, item_diff)
 
             for item in moving_items:
                 for i in range(len(item["pos"])):
-                    item_size = point_to_vector(item["size"])
-                    item_pos = point_to_vector(item["pos"][i])
-                    item_dest = point_to_vector(item["dest"][i])
+                    item_size = to_screen_vector(point_to_vector(item["size"]))
+                    item_pos = to_screen_vector(point_to_vector(item["pos"][i]))
+                    item_dest = to_screen_vector(point_to_vector(item["dest"][i]))
+                    item_speed = (item_dest - item_pos).length() / item["time"]
                     item_diff = character_diff(item["diff"][0], item["diff"][1], item["diff"][2], item["diff"][3])
-                    level.add_moving_item(item["spr"], item_size, item_pos, item_diff, item["speed"], item_dest)
+                    level.add_moving_item(item["spr"], item_size, item_pos, item_diff, item_speed, item_dest)
 
         valid_size_factor = has_keys("size_factor", level_struct, int)
 
@@ -404,10 +409,10 @@ class Level:
                 valid_sprite = has_sprite(item)
                 valid_size = has_valid_size(item)
                 valid_diff = has_keys("diff", item, list) and validate_list(item["diff"], 4, int)
-                valid_speed = has_keys("speed", item, (int, float))
+                valid_time = has_keys("time", item, (int, float))
                 valid_pos = has_valid_poses(item)
                 valid_dest = valid_pos and has_keys("dest", item, list) and len(item["dest"]) == len(item["pos"]) and validate_poses(item["dest"])
-                valid_moving_items = valid_sprite and valid_diff and valid_pos and valid_speed and valid_dest
+                valid_moving_items = valid_sprite and valid_diff and valid_pos and valid_time and valid_dest
                 if(not valid_moving_items):
                     break
 
@@ -418,29 +423,11 @@ class Level:
 
         return generator
 
-    def convert_tilemap_vector(self, vector: Vector2, to_tilemap: bool = False) -> Vector2:
-        new_vector = Vector2(0, 0)
-        if(to_tilemap):
-            new_vector = vector2_mult(vector, self.TILEMAP.size)
-        else:
-            new_vector = vector2_div(vector, self.TILEMAP.size)
-        return new_vector
-
-    def convert_unit_vector(self, vector: Vector2, to_unit: bool = False) -> Vector2:
-        new_vector = Vector2(0, 0)
-        if(to_unit):
-            new_vector = vector2_mult(vector, self.UNITS)
-        else:
-            new_vector = vector2_div(vector, self.UNITS)
-        return new_vector
-
     def build_level(self) -> None:
-        from Objects import TilemapLayer
-        if(self.GROUND != None):
-            raise RuntimeError("The level was already built.")
-        self.GROUND = TilemapLayer()
-        self.HAZARD = TilemapLayer()
-        self.GENERATOR()
+        from Objects import Tilemap
+        for i in range(len(self.TILEMAP_LAYERS)):
+            self.TILEMAP.add_layer()
+        self.GENERATOR(self)
 
     def logic(self) -> None:
         for object in self.OBJECTS:
@@ -452,10 +439,12 @@ class Level:
         pass
 
     def add_ground_tile(self, sprite_path: str, tile_pos: Vector2) -> None:
-        self.GROUND.addTile(sprite_path, tile_pos)
+        ground_layer: int = self.TILEMAP_LAYERS["ground"]
+        self.TILEMAP.add_tile(sprite_path, ground_layer, tile_pos)
 
     def add_hazard_tile(self, sprite_path: str, tile_pos: Vector2) -> None:
-        self.HAZARD.addTile(sprite_path, tile_pos)
+        hazard_layer: int = self.TILEMAP_LAYERS["hazard"]
+        self.TILEMAP.add_tile(sprite_path, hazard_layer, tile_pos)
 
     def add_character(self, sprite_path: str, size: Vector2, pos: Vector2, jump_dist: float, jump_height: float, jump_time: float, dash_dist: float, dash_time: float) -> None:
         from Objects import Character

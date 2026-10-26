@@ -1,26 +1,20 @@
 import pygame
 from pygame import Vector2
-from BasicObjects import BasicSprite, LevelSprite
-from Utils import character_diff, Control, in_right_interval, direction, trunc_vector2
+from BasicObjects import BasicSprite
+from Utils import character_diff, Control, in_right_interval, direction, trunc_vector2, vector2_div, vector2_mult
 from math import ceil
 
-class Character(LevelSprite):
+class Character(BasicSprite):
     def __init__(self, sprite_path: str, size: Vector2, pos: Vector2, jump_dist: float, jump_height: float, jump_time: float, dash_dist: float, dash_time: float) -> None:
+        super().__init__(sprite_path, size, pos)
         from Game import GAME
         from Physics import character_physics_controller as physics
-        def convert_x(num: float) -> float:
-            return GAME._level.convert_unit_vector(Vector2(num, 0)).x
-        def convert_y(num: float) -> float:
-            return GAME._level.convert_unit_vector(Vector2(0, num)).y
-        fixed_delta = GAME.fixed_dt()
-        jump_force = convert_y(2 * jump_height / jump_time) * fixed_delta
-        gravity = convert_y((2 * jump_height / jump_time) / jump_time) * (fixed_delta ** 2)
-        speed = convert_x(jump_dist / (2 * jump_time)) * fixed_delta
-        dash_speed = convert_x(dash_dist / dash_time) * fixed_delta
-        screen_dash_dist = convert_x(dash_dist)
+        jump_force = 2 * jump_height / jump_time * GAME.fixed_dt()
+        gravity = (2 * jump_height / jump_time) / jump_time * (GAME.fixed_dt() ** 2)
+        speed = jump_dist / (2 * jump_time) * GAME.fixed_dt()
+        dash_speed = dash_dist / dash_time * GAME.fixed_dt()
 
-        super().__init__(sprite_path, size, pos)
-        self.PHYSICS: physics = physics(self, speed, jump_force, gravity, screen_dash_dist, dash_speed)
+        self.PHYSICS: physics = physics(self, speed, jump_force, gravity, dash_dist, dash_speed)
 
     def behaviour(self) -> None:
         keys, new_keys = pygame.key.get_pressed(), pygame.key.get_just_pressed()
@@ -52,7 +46,7 @@ class Character(LevelSprite):
 
     def death_check(self) -> None:
         from Game import GAME
-        hazard_contacts = GAME._level.HAZARD.collides(self, False)
+        hazard_contacts = GAME._level.TILEMAP.collides(GAME._level.TILEMAP_LAYERS["hazard"], self, False)
         if(len(hazard_contacts) > 0):
             GAME.set_command(Control.restart_level())
 
@@ -79,65 +73,69 @@ class Character(LevelSprite):
         if(new_keys[pygame.K_2]):
            self.increase_dashes(1)
 
-class TilemapLayer:
-    def __init__(self) -> None:
-        self.SPRITES: pygame.sprite.Group = pygame.sprite.Group()
-        self.MAP: list[list[BasicSprite]] = []
-        for i in range(int(self.SIZE.x)):
-            self.MAP.append([])
-            for j in range(int(self.SIZE.y)):
-                self.MAP[i].append(None)
+class Tilemap:
+    def __init__(self, size: Vector2) -> None:
+        self._SIZE: Vector2 = size
+        self._TILESIZE: Vector2 = vector2_div(Vector2(1, 1), self._SIZE)
+        self._SPRITES: pygame.sprite.Group = pygame.sprite.Group()
+        self._MAP: list[list[list[BasicSprite]]] = []
 
     @property
-    def SIZE(self) -> Vector2:
-        from Game import GAME
-        return GAME._level.TILEMAP.size
+    def size(self) -> Vector2:
+        return self._SIZE
 
     @property
-    def TILE_SIZE(self) -> Vector2:
-        from Game import GAME
-        return GAME._level.TILEMAP.tile_size
+    def SPRITES(self) -> pygame.sprite.Group:
+        return self._SPRITES
 
-    def convert_to_screen(self, pos: Vector2) -> Vector2:
-        from Game import GAME
-        return GAME._level.convert_tilemap_vector(pos)
+    def _convert_to_screen(self, pos: Vector2) -> Vector2:
+        return vector2_div(pos, self._SIZE)
 
-    def convert_to_tilemap(self, pos: Vector2) -> Vector2:
-        from Game import GAME
-        return GAME._level.convert_tilemap_vector(pos, True)
+    def _convert_to_tilemap(self, pos: Vector2) -> Vector2:
+        return vector2_mult(pos, self._SIZE)
 
-    def addTile(self, sprite_path: str, tile_pos: Vector2) -> None:
-        from Game import GAME
-        if(self.MAP[int(tile_pos.x)][int(tile_pos.y)] == None):
-            pos = self.convert_to_screen(tile_pos + Vector2(0.5, 0.5))
-            tile = BasicSprite(sprite_path, pos, self.TILE_SIZE)
-            self.SPRITES.add(tile)
-            self.MAP[int(tile_pos.x)][int(tile_pos.y)] = tile
+    def add_layer(self) -> None:
+        self._MAP.append([])
+        layer = self._MAP[len(self._MAP) - 1]
+        for i in range(int(self._SIZE.x)):
+            layer.append([])
+            for j in range(int(self._SIZE.y)):
+                layer[i].append(None)
 
-    def getTile(self, tile_pos: Vector2, pseudo_tile: bool) -> BasicSprite | None:
-        if(in_right_interval(tile_pos.x, 0, len(self.MAP)) and in_right_interval(tile_pos.y, 0, len(self.MAP[0]))):
-            return self.MAP[int(tile_pos.x)][int(tile_pos.y)]
+    def add_tile(self, sprite_path: str, layer_n: int, tile_pos: Vector2) -> None:
+        from Game import GAME
+        layer = self._MAP[layer_n]
+        if(layer[int(tile_pos.x)][int(tile_pos.y)] == None):
+            pos = self._convert_to_screen(tile_pos + Vector2(0.5, 0.5))
+            tile = BasicSprite(sprite_path, self._TILESIZE, pos)
+            self._SPRITES.add(tile)
+            layer[int(tile_pos.x)][int(tile_pos.y)] = tile
+
+    def get_tile(self, layer_n: int, tile_pos: Vector2, pseudo_tile: bool) -> BasicSprite | None:
+        layer = self._MAP[layer_n]
+        if(in_right_interval(tile_pos.x, 0, self._SIZE.x) and in_right_interval(tile_pos.y, 0, self._SIZE.y)):
+            return layer[int(tile_pos.x)][int(tile_pos.y)]
         else:
             if(pseudo_tile):
-                pos = self.convert_to_screen(tile_pos + Vector2(0.5, 0.5))
-                return BasicSprite(None, pos, self.TILE_SIZE)
+                pos = self._convert_to_screen(tile_pos + Vector2(0.5, 0.5))
+                return BasicSprite(None, self._TILESIZE, pos)
             else:
                 return None
 
-    def collides(self, object: type[BasicSprite], pseudo_tiles: bool) -> list[BasicSprite]:
-        tilemap_pos = trunc_vector2(self.convert_to_tilemap(object.pos))
-        border_offset = self.convert_to_tilemap(object.edge_offset)
+    def collides(self, layer_n: int, object: type[BasicSprite], pseudo_tiles: bool) -> list[BasicSprite]:
+        tilemap_pos = trunc_vector2(self._convert_to_tilemap(object.pos))
+        border_offset = self._convert_to_tilemap(object.edge_offset)
         tile_offset = Vector2(ceil(border_offset.x), ceil(border_offset.y))
         collisions = []
         for i in range(int(-tile_offset.x), int(tile_offset.x) + 1):
             for j in range(int(-tile_offset.y), int(tile_offset.y) + 1):
                 offset = Vector2(i, j)
-                tile = self.getTile(tilemap_pos + offset, pseudo_tiles)
+                tile = self.get_tile(layer_n, tilemap_pos + offset, pseudo_tiles)
                 if(tile != None and tile.overlap(object)):
                     collisions.append(tile)
         return collisions
 
-class Finish(LevelSprite):
+class Finish(BasicSprite):
     def __init__(self, sprite_path: str | None, size: Vector2, pos: Vector2) -> None:
         super().__init__(sprite_path, size, pos)
 
@@ -147,7 +145,7 @@ class Finish(LevelSprite):
         if(self.overlap(character)):
             GAME.set_command(Control.close_level())
 
-class Collectable(LevelSprite):
+class Collectable(BasicSprite):
     def __init__(self, sprite_path: str | None, size: Vector2, pos: Vector2, diff: character_diff) -> None:
         super().__init__(sprite_path, size, pos)
         self.DIFF: character_diff = diff
@@ -169,10 +167,9 @@ class MovingCollectable(Collectable):
     def __init__(self, sprite_path: str | None, size: Vector2, pos: Vector2, diff: character_diff, speed: float, destination: Vector2) -> None:
         from Game import GAME
         super().__init__(sprite_path, size, pos, diff)
-        screen_speed = GAME._level.convert_unit_vector(Vector2(speed, 0)).x
-        self.SPEED: float = screen_speed * GAME.fixed_dt()
+        self.SPEED: float = speed * GAME.fixed_dt()
         self.START: Vector2 = self.pos.copy()
-        self.DESTINATION: Vector2 = GAME._level.convert_unit_vector(destination)
+        self.DESTINATION: Vector2 = destination
         self.DIR: Vector2 = (self.DESTINATION - self.START).normalize()
         self.to_end: bool = True
 

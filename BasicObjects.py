@@ -1,14 +1,13 @@
 import pygame
 from pygame import Vector2
-from Utils import vector2_mult, round_vector2, abs_vector2
+from Utils import vector2_mult, vector2_div, round_vector2, abs_vector2
 from os import path
 
 class BasicSprite(pygame.sprite.Sprite):
-    def __init__(self, sprite_path: str | None, screen_pos: Vector2, screen_size: Vector2) -> None:
+    def __init__(self, sprite_path: str | None, size: Vector2, pos: Vector2) -> None:
         super().__init__()
-        self.pos: Vector2 = screen_pos
-        self.size: Vector2 = screen_size
-
+        self.size: Vector2 = size
+        self.pos: Vector2 = pos
         self.load_image(sprite_path)
 
     @property
@@ -73,10 +72,3 @@ class BasicSprite(pygame.sprite.Sprite):
 
     def fixed_step_behaviour(self):
         pass
-
-class LevelSprite(BasicSprite):
-    def __init__(self, sprite_path, level_size, level_pos):
-        from Game import GAME
-        screen_pos = GAME._level.convert_unit_vector(level_pos, False)
-        screen_size = GAME._level.convert_unit_vector(level_size, False)
-        super().__init__(sprite_path, screen_pos, screen_size)

@@ -43,23 +43,23 @@ def level_selection() -> UI_Screen:
             level = level_number + page * levels_per_page
             grid_pos = Vector2(level_number % grid.x, level_number // grid.x)
             open_pos = calc_pos(grid_pos)
-            pages[page].add_button("", open_pos, button_size, load_level(files[level]))
+            pages[page].add_button("", button_size, open_pos, load_level(files[level]))
 
             level_name = files[level].replace(".json", "")
             text_pos = open_pos + Vector2(0, button_size.y / 2 + gap.y / 4)
-            pages[page].add_text(level_name, text_pos, text_size)
+            pages[page].add_text(level_name, text_size, text_pos)
         return_pos = Vector2(0.5, calc_pos(Vector2(0, grid.y - 1)).y)
-        pages[page].add_button("", return_pos, button_size, open_main_menu)
+        pages[page].add_button("", button_size, return_pos, open_main_menu)
     if(pages_count > 1):
         for page in range(len(pages)):
             if(page < len(pages) - 1):
                 grid_pos = grid - Vector2(1, 1)
                 next_pos = calc_pos(grid_pos)
-                pages[page].add_button("", next_pos, button_size, switch_to(pages[page+1]))
+                pages[page].add_button("", button_size, next_pos, switch_to(pages[page+1]))
             if(page > 0):
                 grid_pos = Vector2(0, grid.y - 1)
                 back_pos = calc_pos(grid_pos)
-                pages[page].add_button("", back_pos, button_size, switch_to(pages[page-1]))
+                pages[page].add_button("", button_size, back_pos, switch_to(pages[page-1]))
     return pages[0]
 
 def open_level_selection() -> None:
@@ -68,8 +68,8 @@ def open_level_selection() -> None:
 pygame.init()
 GAME.init()
 menu = UI_Screen()
-menu.add_button("CharBlock.png", Vector2(0.5, 0.3), Vector2(0.5, 0.2), open_level_selection)
-menu.add_button("HazardBlock.png", Vector2(0.5, 0.7), Vector2(0.5, 0.2), close_game)
+menu.add_button("CharBlock.png", Vector2(0.5, 0.2), Vector2(0.5, 0.3), open_level_selection)
+menu.add_button("HazardBlock.png", Vector2(0.5, 0.2), Vector2(0.5, 0.7), close_game)
 GAME.start(menu)
 
 while GAME.active():
@@ -85,7 +85,6 @@ while GAME.active():
 
     GAME.update()
     GAME.execute_command()
-    GAME._FRAME.render()
-    GAME._FRAME.next()
+    GAME.next_frame()
 
 pygame.quit()

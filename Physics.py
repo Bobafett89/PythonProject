@@ -29,12 +29,12 @@ class character_physics_controller:
                 self.DASH.destination = None
 
             def next_state() -> BasicSprite:
-                return BasicSprite(None, self.CHAR.pos + self.VELOCITY, self.CHAR.size)
+                return BasicSprite(None, self.CHAR.size, self.CHAR.pos + self.VELOCITY)
 
             if(self.VELOCITY.y != 0):
                 self.JUMP.on_ground = False
             new_state = next_state()
-            tiles = GAME._level.GROUND.collides(new_state, True)
+            tiles = GAME._level.TILEMAP.collides(GAME._level.TILEMAP_LAYERS["ground"], new_state, True)
             tiles.sort(key=(lambda tile: (tile.pos - self.CHAR.pos).length()))
             for tile in tiles:
                 min_dist = self.CHAR.edge_offset + tile.edge_offset

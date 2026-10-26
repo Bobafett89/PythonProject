@@ -9,12 +9,12 @@ class UI_Screen:
         self.SPRITES: pygame.sprite.Group = pygame.sprite.Group()
         self.BUTTONS: list[Button] = []
 
-    def add_text(self, text: str, pos: Vector2, size: Vector2) -> None:
-        new_text = Text(text, pos, size)
+    def add_text(self, text: str, size: Vector2, pos: Vector2) -> None:
+        new_text = Text(text, size, pos)
         self.SPRITES.add(new_text)
 
-    def add_button(self, sprite_path: str, pos: Vector2, size: Vector2, callback: Callable[[Game_manager], None]) -> None:
-        new_button = Button(sprite_path, pos, size, callback)
+    def add_button(self, sprite_path: str, size: Vector2, pos: Vector2, callback: Callable[[], None]) -> None:
+        new_button = Button(sprite_path, size, pos, callback)
         self.SPRITES.add(new_button)
         self.BUTTONS.append(new_button)
 
@@ -25,9 +25,9 @@ class UI_Screen:
                 break
 
 class Text(BasicSprite):
-    def __init__(self, text: str, pos: Vector2, max_size: Vector2) -> None:
+    def __init__(self, text: str, max_size: Vector2, pos: Vector2) -> None:
         from Game import GAME
-        super().__init__(None, pos, max_size)
+        super().__init__(None, max_size, pos)
         font = pygame.font.Font(size=self.get_max_point_size(text, max_size))
         font.align = pygame.FONT_CENTER
         img = font.render(text, True, "white", wraplength=round(max_size.x * GAME.screen_size().x))
@@ -53,8 +53,8 @@ class Text(BasicSprite):
         return point_size
 
 class Button(BasicSprite):
-    def __init__(self, sprite_path: str, pos: Vector2, size: Vector2, callback: Callable[[], None]) -> None:
-        super().__init__(sprite_path, pos, size)
+    def __init__(self, sprite_path: str, size: Vector2, pos: Vector2, callback: Callable[[], None]) -> None:
+        super().__init__(sprite_path, size, pos)
         self.CALLBACK: Callable[[], None] = callback
 
     def behaviour(self) -> bool:

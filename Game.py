@@ -139,7 +139,6 @@ class GAME:
         cls._active = False
 
 class UI:
-    from UI import UI_Screen
     def __init__(self) -> None:
         from UI import UI_Screen
         self.start_menu: UI_Screen = None
@@ -219,7 +218,6 @@ class Level:
 
     def __init__(self, generator: Callable[[], None], tilemap_size: Vector2) -> None:
         from Objects import Tilemap, Character
-        from BasicObjects import BasicSprite
         self.SPRITES: pygame.sprite.Group = pygame.sprite.Group()
         self.GENERATOR: Callable[[], None] = generator
         self.TILEMAP: Tilemap = Tilemap(tilemap_size)
@@ -424,7 +422,6 @@ class Level:
         return generator
 
     def build_level(self) -> None:
-        from Objects import Tilemap
         for name in Level._DEF_TILEMAP_LAYERS:
             self.TILEMAP.add_layer(name)
         self.GENERATOR(self)

@@ -2,19 +2,15 @@ from pygame import Vector2
 from Utils import jump_struct, dash_struct, direction, abs_vector2
 
 class character_physics_controller:
-        from Objects import Character
-        def __init__(self, char: Character, speed: float, jump_force: float, gravity: float, dash_dist: float, dash_speed: float) -> None:
-            from Objects import Character
+        def __init__(self, speed: float, jump_force: float, gravity: float, dash_dist: float, dash_speed: float) -> None:
             self.VELOCITY: Vector2 = Vector2(0, 0)
             self.GRAVITY: float = gravity
             self.JUMP: jump_struct = jump_struct(force=jump_force)
             self.DASH: dash_struct = dash_struct(distance=dash_dist, speed=dash_speed)
             self.SPEED: float = speed
-            self.CHAR: Character = char
             self.dir: float = 1
 
-        def collide(self) -> None:
-            from Game import GAME
+        def collide(self, obj_size: Vector2, obj_pos: Vector2, ground: TilemapLayer) -> None:
             from BasicObjects import BasicSprite
             def hit_floor() -> None:
                 if(self.VELOCITY.y > 0):
@@ -29,16 +25,16 @@ class character_physics_controller:
                 self.DASH.destination = None
 
             def next_state() -> BasicSprite:
-                return BasicSprite(None, self.CHAR.size, self.CHAR.pos + self.VELOCITY)
+                return BasicSprite(None, obj_size, obj_pos + self.VELOCITY)
 
             if(self.VELOCITY.y != 0):
                 self.JUMP.on_ground = False
             new_state = next_state()
-            tiles = self.CHAR.TILEMAP.collides("ground", new_state, True)
-            tiles.sort(key=(lambda tile: (tile.pos - self.CHAR.pos).length()))
+            tiles = ground.collides(new_state, True)
+            tiles.sort(key=(lambda tile: (tile.pos - obj_pos).length()))
             for tile in tiles:
-                min_dist = self.CHAR.edge_offset + tile.edge_offset
-                dir = tile.pos - self.CHAR.pos
+                min_dist = new_state.edge_offset + tile.edge_offset
+                dir = tile.pos - obj_pos
                 dist = abs_vector2(tile.pos - new_state.pos)
                 if(dist.x < min_dist.x and dist.y < min_dist.y):
                     epsilon = 2 ** (-53)
@@ -79,7 +75,7 @@ class character_physics_controller:
                     if(not self.JUMP.on_ground):
                         self.JUMP.air_jumps -= 1
 
-        def move(self) -> None:
+        def move(self) -> Vector2:
             if(self.VELOCITY.x != 0):
                 self.dir = direction(self.VELOCITY.x > 0)
                 dash = self.DASH
@@ -88,4 +84,4 @@ class character_physics_controller:
                         self.VELOCITY.x = dash.left * self.dir
                         dash.is_active = False
                     dash.left -= abs(self.VELOCITY.x)
-            self.CHAR._move_by(self.VELOCITY)
+            return self.VELOCITY

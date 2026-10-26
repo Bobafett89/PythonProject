@@ -14,7 +14,7 @@ class Character(BasicSprite):
         speed = jump_dist / (2 * jump_time) * GAME.fixed_dt()
         dash_speed = dash_dist / dash_time * GAME.fixed_dt()
 
-        self.PHYSICS: physics = physics(self, speed, jump_force, gravity, dash_dist, dash_speed)
+        self.PHYSICS: physics = physics(speed, jump_force, gravity, dash_dist, dash_speed)
         self.TILEMAP: Tilemap = tilemap
 
     def update(self) -> None:
@@ -31,7 +31,7 @@ class Character(BasicSprite):
 
         self.__debug()
 
-    def fixed_update(self):
+    def fixed_update(self) -> None:
         self.PHYSICS.apply_grav()
 
         keys = pygame.key.get_pressed()
@@ -41,8 +41,8 @@ class Character(BasicSprite):
         if(keys[pygame.K_w] and self.PHYSICS.JUMP.on_ground):
             self.PHYSICS.jump()
 
-        self.PHYSICS.collide()
-        self.PHYSICS.move()
+        self.PHYSICS.collide(self._size, self._pos, self.TILEMAP.get_layer("ground"))
+        self._move_by(self.PHYSICS.move())
         self.death_check()
 
     def death_check(self) -> None:
@@ -91,6 +91,9 @@ class Tilemap:
 
     def add_layer(self, name: str) -> None:
         self.LAYERS[name] = TilemapLayer(self._SIZE, self._SPRITES)
+
+    def get_layer(self, name: str) -> TilemapLayer:
+        return self.LAYERS[name]
 
     def add_tile(self, sprite_path: str, layer_name: str, tile_pos: Vector2) -> None:
         self.LAYERS[layer_name].add_tile(sprite_path, tile_pos)
@@ -166,7 +169,6 @@ class Collectable(BasicSprite):
         self.CHAR: type[BasicSprite] = character
 
     def fixed_update(self) -> None:
-        from Game import GAME
         collide_with_character = self.overlap(self.CHAR)
         if(collide_with_character and not self.is_collected):
             self.CHAR.give_air_jumps(self.DIFF.air_jumps)

@@ -79,7 +79,7 @@ class Tilemap:
         self._SIZE: Vector2 = size
         self._TILESIZE: Vector2 = vector2_div(Vector2(1, 1), self._SIZE)
         self._SPRITES: pygame.sprite.Group = pygame.sprite.Group()
-        self._MAP: dict[list[list[BasicSprite]]] = dict()
+        self.LAYERS: dict[TilemapLayer] = dict()
 
     @property
     def size(self) -> Vector2:
@@ -89,33 +89,45 @@ class Tilemap:
     def SPRITES(self) -> pygame.sprite.Group:
         return self._SPRITES
 
+    def add_layer(self, name: str) -> None:
+        self.LAYERS[name] = TilemapLayer(self._SIZE, self._SPRITES)
+
+    def add_tile(self, sprite_path: str, layer_name: str, tile_pos: Vector2) -> None:
+        self.LAYERS[layer_name].add_tile(sprite_path, tile_pos)
+
+    def get_tile(self, layer_name: str, tile_pos: Vector2, pseudo_tile: bool) -> BasicSprite | None:
+        return self.LAYERS[layer_name].get_tile(tile_pos, pseudo_tile)
+
+    def collides(self, layer_name: str, object: type[BasicSprite], pseudo_tiles: bool) -> list[BasicSprite]:
+        return self.LAYERS[layer_name].collides(object, pseudo_tiles)
+
+class TilemapLayer:
+    def __init__(self, size: Vector2, sprite_group: pygame.sprite.Group) -> None:
+        self._SIZE: Vector2 = size
+        self._TILESIZE: Vector2 = vector2_div(Vector2(1, 1), self._SIZE)
+        self._SPRITES: pygame.sprite.Group = sprite_group
+        self._MAP: list[list[BasicSprite]] = []
+        for i in range(int(self._SIZE.x)):
+            self._MAP.append([])
+            for j in range(int(self._SIZE.y)):
+                self._MAP[i].append(None)
+
     def _convert_to_screen(self, pos: Vector2) -> Vector2:
         return vector2_div(pos, self._SIZE)
 
     def _convert_to_tilemap(self, pos: Vector2) -> Vector2:
         return vector2_mult(pos, self._SIZE)
 
-    def add_layer(self, name: str) -> None:
-        self._MAP[name] = []
-        layer = self._MAP[name]
-        for i in range(int(self._SIZE.x)):
-            layer.append([])
-            for j in range(int(self._SIZE.y)):
-                layer[i].append(None)
-
-    def add_tile(self, sprite_path: str, layer_name: str, tile_pos: Vector2) -> None:
-        from Game import GAME
-        layer = self._MAP[layer_name]
-        if(layer[int(tile_pos.x)][int(tile_pos.y)] == None):
+    def add_tile(self, sprite_path: str, tile_pos: Vector2) -> None:
+        if(self._MAP[int(tile_pos.x)][int(tile_pos.y)] == None):
             pos = self._convert_to_screen(tile_pos + Vector2(0.5, 0.5))
             tile = BasicSprite(sprite_path, self._TILESIZE, pos)
             self._SPRITES.add(tile)
-            layer[int(tile_pos.x)][int(tile_pos.y)] = tile
+            self._MAP[int(tile_pos.x)][int(tile_pos.y)] = tile
 
-    def get_tile(self, layer_name: str, tile_pos: Vector2, pseudo_tile: bool) -> BasicSprite | None:
-        layer = self._MAP[layer_name]
+    def get_tile(self, tile_pos: Vector2, pseudo_tile: bool) -> BasicSprite | None:
         if(in_right_interval(tile_pos.x, 0, self._SIZE.x) and in_right_interval(tile_pos.y, 0, self._SIZE.y)):
-            return layer[int(tile_pos.x)][int(tile_pos.y)]
+            return self._MAP[int(tile_pos.x)][int(tile_pos.y)]
         else:
             if(pseudo_tile):
                 pos = self._convert_to_screen(tile_pos + Vector2(0.5, 0.5))
@@ -123,7 +135,7 @@ class Tilemap:
             else:
                 return None
 
-    def collides(self, layer_name: str, object: type[BasicSprite], pseudo_tiles: bool) -> list[BasicSprite]:
+    def collides(self, object: type[BasicSprite], pseudo_tiles: bool) -> list[BasicSprite]:
         tilemap_pos = trunc_vector2(self._convert_to_tilemap(object.pos))
         border_offset = self._convert_to_tilemap(object.edge_offset)
         tile_offset = Vector2(ceil(border_offset.x), ceil(border_offset.y))
@@ -131,7 +143,7 @@ class Tilemap:
         for i in range(int(-tile_offset.x), int(tile_offset.x) + 1):
             for j in range(int(-tile_offset.y), int(tile_offset.y) + 1):
                 offset = Vector2(i, j)
-                tile = self.get_tile(layer_name, tilemap_pos + offset, pseudo_tiles)
+                tile = self.get_tile(tilemap_pos + offset, pseudo_tiles)
                 if(tile != None and tile.overlap(object)):
                     collisions.append(tile)
         return collisions

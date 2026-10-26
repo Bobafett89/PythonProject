@@ -20,7 +20,7 @@ class UI_Screen:
 
     def press_buttons(self) -> None:
         for button in self.BUTTONS:
-            pressed = button.behaviour()
+            pressed = button.update()
             if(pressed):
                 break
 
@@ -32,8 +32,8 @@ class Text(BasicSprite):
         font.align = pygame.FONT_CENTER
         img = font.render(text, True, "white", wraplength=round(max_size.x * GAME.screen_size().x))
         text_size = vector2_div(Vector2(img.size), GAME.screen_size())
-        self.set_size(text_size)
-        self.set_image(img)
+        self._set_size(text_size)
+        self._set_image(img)
 
     def get_max_point_size(self, text: str, max_size: Vector2) -> int:
         from Game import GAME
@@ -57,7 +57,7 @@ class Button(BasicSprite):
         super().__init__(sprite_path, size, pos)
         self.CALLBACK: Callable[[], None] = callback
 
-    def behaviour(self) -> bool:
+    def update(self) -> bool:
         from Game import GAME
         pressed = False
         cursor_pos = vector2_div(Vector2(pygame.mouse.get_pos()), GAME.screen_size())

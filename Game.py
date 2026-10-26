@@ -431,10 +431,10 @@ class Level:
 
     def logic(self) -> None:
         for object in self.OBJECTS:
-            object.behaviour()
+            object.update()
         for i in range(GAME.fixed_steps()):
             for object in self.OBJECTS:
-                object.fixed_step_behaviour()
+                object.fixed_update()
         self.collect_items()
         pass
 

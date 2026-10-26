@@ -17,7 +17,7 @@ class Character(BasicSprite):
         self.PHYSICS: physics = physics(self, speed, jump_force, gravity, dash_dist, dash_speed)
         self.TILEMAP: Tilemap = tilemap
 
-    def behaviour(self) -> None:
+    def update(self) -> None:
         keys, new_keys = pygame.key.get_pressed(), pygame.key.get_just_pressed()
 
         if(new_keys[pygame.K_LSHIFT]):
@@ -31,7 +31,7 @@ class Character(BasicSprite):
 
         self.__debug()
 
-    def fixed_step_behaviour(self):
+    def fixed_update(self):
         self.PHYSICS.apply_grav()
 
         keys = pygame.key.get_pressed()
@@ -141,7 +141,7 @@ class Finish(BasicSprite):
         super().__init__(sprite_path, size, pos)
         self.CHAR: type[BasicSprite] = character
 
-    def fixed_step_behaviour(self) -> None:
+    def fixed_update(self) -> None:
         from Game import GAME
         if(self.overlap(self.CHAR)):
             GAME.set_command(Control.close_level())
@@ -153,7 +153,7 @@ class Collectable(BasicSprite):
         self.is_collected: bool = False
         self.CHAR: type[BasicSprite] = character
 
-    def fixed_step_behaviour(self) -> None:
+    def fixed_update(self) -> None:
         from Game import GAME
         collide_with_character = self.overlap(self.CHAR)
         if(collide_with_character and not self.is_collected):
@@ -173,7 +173,7 @@ class MovingCollectable(Collectable):
         self.DIR: Vector2 = (self.DESTINATION - self.START).normalize()
         self.to_end: bool = True
 
-    def fixed_step_behaviour(self) -> None:
+    def fixed_update(self) -> None:
         target: Vector2 = None
         if(self.to_end):
             target = self.DESTINATION
@@ -186,5 +186,5 @@ class MovingCollectable(Collectable):
         else:
             offset *= left
             self.to_end = not self.to_end
-        self.move_by(offset)
-        super().fixed_step_behaviour()
+        self._move_by(offset)
+        super().fixed_update()

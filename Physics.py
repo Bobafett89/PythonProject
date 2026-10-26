@@ -88,4 +88,4 @@ class character_physics_controller:
                         self.VELOCITY.x = dash.left * self.dir
                         dash.is_active = False
                     dash.left -= abs(self.VELOCITY.x)
-            self.CHAR.move_by(self.VELOCITY)
+            self.CHAR._move_by(self.VELOCITY)

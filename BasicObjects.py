@@ -6,9 +6,17 @@ from os import path
 class BasicSprite(pygame.sprite.Sprite):
     def __init__(self, sprite_path: str | None, size: Vector2, pos: Vector2) -> None:
         super().__init__()
-        self.size: Vector2 = size
-        self.pos: Vector2 = pos
-        self.load_image(sprite_path)
+        self._size: Vector2 = size
+        self._pos: Vector2 = pos
+        self._load_image(sprite_path)
+
+    @property
+    def size(self) -> Vector2:
+        return self._size
+
+    @property
+    def pos(self) -> Vector2:
+        return self._pos
 
     @property
     def edge_offset(self) -> Vector2:
@@ -22,34 +30,34 @@ class BasicSprite(pygame.sprite.Sprite):
     def botright(self) -> Vector2:
         return self.pos + self.edge_offset
 
-    def set_center(self) -> None:
+    def _set_center(self) -> None:
         from Game import GAME
         pos = round_vector2(vector2_mult(self.pos, GAME.screen_size()))
         self.rect = self.rect.move_to(center=pos)
 
-    def move_to(self, new_pos: Vector2) -> None:
-        self.pos = new_pos
-        self.set_center()
+    def _move_to(self, new_pos: Vector2) -> None:
+        self._pos = new_pos
+        self._set_center()
 
-    def move_by(self, offset: Vector2) -> None:
-        self.move_to(self.pos + offset)
+    def _move_by(self, offset: Vector2) -> None:
+        self._move_to(self.pos + offset)
 
-    def rescale(self) -> None:
+    def _rescale(self) -> None:
         from Game import GAME
-        size = round_vector2(vector2_mult(self.size, GAME.screen_size()))
+        size: Vector2 = round_vector2(vector2_mult(self.size, GAME.screen_size()))
         self.image = pygame.transform.scale(self.image, size)
         self.rect = self.image.get_rect()
-        self.set_center()
+        self._set_center()
 
-    def set_size(self, new_size: Vector2) -> None:
-        self.size = new_size
-        self.rescale()
+    def _set_size(self, new_size: Vector2) -> None:
+        self._size = new_size
+        self._rescale()
 
-    def set_image(self, image: pygame.Surface) -> None:
+    def _set_image(self, image: pygame.Surface) -> None:
         self.image = image
-        self.rescale()
+        self._rescale()
 
-    def load_image(self, sprite_path: str | None) -> None:
+    def _load_image(self, sprite_path: str | None) -> None:
         img: pygame.Surface = None
         try:
             if(sprite_path != None):
@@ -60,15 +68,15 @@ class BasicSprite(pygame.sprite.Sprite):
         except (pygame.error, FileNotFoundError):
             img = pygame.Surface(Vector2(0, 0))
             img.fill("black")
-        self.set_image(img)
+        self._set_image(img)
 
     def overlap(self, other: type[BasicSprite]) -> bool:
-        dist = abs_vector2(self.pos - other.pos)
-        min_dist = self.edge_offset + other.edge_offset
+        dist: Vector2 = abs_vector2(self.pos - other.pos)
+        min_dist: Vector2 = self.edge_offset + other.edge_offset
         return dist.x < min_dist.x and dist.y < min_dist.y
 
-    def behaviour(self) -> None:
+    def update(self) -> None:
         pass
 
-    def fixed_step_behaviour(self):
+    def fixed_update(self) -> None:
         pass

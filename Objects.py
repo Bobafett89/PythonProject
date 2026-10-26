@@ -46,7 +46,7 @@ class Character(BasicSprite):
 
     def death_check(self) -> None:
         from Game import GAME
-        hazard_contacts = GAME._level.TILEMAP.collides(GAME._level.TILEMAP_LAYERS["hazard"], self, False)
+        hazard_contacts = GAME._level.TILEMAP.collides("hazard", self, False)
         if(len(hazard_contacts) > 0):
             GAME.set_command(Control.restart_level())
 
@@ -78,7 +78,7 @@ class Tilemap:
         self._SIZE: Vector2 = size
         self._TILESIZE: Vector2 = vector2_div(Vector2(1, 1), self._SIZE)
         self._SPRITES: pygame.sprite.Group = pygame.sprite.Group()
-        self._MAP: list[list[list[BasicSprite]]] = []
+        self._MAP: dict[list[list[BasicSprite]]] = dict()
 
     @property
     def size(self) -> Vector2:
@@ -94,25 +94,25 @@ class Tilemap:
     def _convert_to_tilemap(self, pos: Vector2) -> Vector2:
         return vector2_mult(pos, self._SIZE)
 
-    def add_layer(self) -> None:
-        self._MAP.append([])
-        layer = self._MAP[len(self._MAP) - 1]
+    def add_layer(self, name: str) -> None:
+        self._MAP[name] = []
+        layer = self._MAP[name]
         for i in range(int(self._SIZE.x)):
             layer.append([])
             for j in range(int(self._SIZE.y)):
                 layer[i].append(None)
 
-    def add_tile(self, sprite_path: str, layer_n: int, tile_pos: Vector2) -> None:
+    def add_tile(self, sprite_path: str, layer_name: str, tile_pos: Vector2) -> None:
         from Game import GAME
-        layer = self._MAP[layer_n]
+        layer = self._MAP[layer_name]
         if(layer[int(tile_pos.x)][int(tile_pos.y)] == None):
             pos = self._convert_to_screen(tile_pos + Vector2(0.5, 0.5))
             tile = BasicSprite(sprite_path, self._TILESIZE, pos)
             self._SPRITES.add(tile)
             layer[int(tile_pos.x)][int(tile_pos.y)] = tile
 
-    def get_tile(self, layer_n: int, tile_pos: Vector2, pseudo_tile: bool) -> BasicSprite | None:
-        layer = self._MAP[layer_n]
+    def get_tile(self, layer_name: str, tile_pos: Vector2, pseudo_tile: bool) -> BasicSprite | None:
+        layer = self._MAP[layer_name]
         if(in_right_interval(tile_pos.x, 0, self._SIZE.x) and in_right_interval(tile_pos.y, 0, self._SIZE.y)):
             return layer[int(tile_pos.x)][int(tile_pos.y)]
         else:
@@ -122,7 +122,7 @@ class Tilemap:
             else:
                 return None
 
-    def collides(self, layer_n: int, object: type[BasicSprite], pseudo_tiles: bool) -> list[BasicSprite]:
+    def collides(self, layer_name: str, object: type[BasicSprite], pseudo_tiles: bool) -> list[BasicSprite]:
         tilemap_pos = trunc_vector2(self._convert_to_tilemap(object.pos))
         border_offset = self._convert_to_tilemap(object.edge_offset)
         tile_offset = Vector2(ceil(border_offset.x), ceil(border_offset.y))
@@ -130,7 +130,7 @@ class Tilemap:
         for i in range(int(-tile_offset.x), int(tile_offset.x) + 1):
             for j in range(int(-tile_offset.y), int(tile_offset.y) + 1):
                 offset = Vector2(i, j)
-                tile = self.get_tile(layer_n, tilemap_pos + offset, pseudo_tiles)
+                tile = self.get_tile(layer_name, tilemap_pos + offset, pseudo_tiles)
                 if(tile != None and tile.overlap(object)):
                     collisions.append(tile)
         return collisions

@@ -215,13 +215,13 @@ class Frame:
 
 class Level:
     _DEF_LEVEL_SIZE: Vector2 = Vector2(16, 9)
+    _DEF_TILEMAP_LAYERS: list[str] = ["ground", "hazard"]
 
     def __init__(self, generator: Callable[[], None], tilemap_size: Vector2) -> None:
         from Objects import Tilemap, Character
         from BasicObjects import BasicSprite
         self.SPRITES: pygame.sprite.Group = pygame.sprite.Group()
         self.GENERATOR: Callable[[], None] = generator
-        self.TILEMAP_LAYERS: dict[int] = dict(ground = 0, hazard = 1)
         self.TILEMAP: Tilemap = Tilemap(tilemap_size)
         self.OBJECTS: list[type[BasicSprite]] = []
         self.COLLECTED: list[type[BasicSprite]] = []
@@ -425,8 +425,8 @@ class Level:
 
     def build_level(self) -> None:
         from Objects import Tilemap
-        for i in range(len(self.TILEMAP_LAYERS)):
-            self.TILEMAP.add_layer()
+        for name in Level._DEF_TILEMAP_LAYERS:
+            self.TILEMAP.add_layer(name)
         self.GENERATOR(self)
 
     def logic(self) -> None:
@@ -439,12 +439,10 @@ class Level:
         pass
 
     def add_ground_tile(self, sprite_path: str, tile_pos: Vector2) -> None:
-        ground_layer: int = self.TILEMAP_LAYERS["ground"]
-        self.TILEMAP.add_tile(sprite_path, ground_layer, tile_pos)
+        self.TILEMAP.add_tile(sprite_path, "ground", tile_pos)
 
     def add_hazard_tile(self, sprite_path: str, tile_pos: Vector2) -> None:
-        hazard_layer: int = self.TILEMAP_LAYERS["hazard"]
-        self.TILEMAP.add_tile(sprite_path, hazard_layer, tile_pos)
+        self.TILEMAP.add_tile(sprite_path, "hazard", tile_pos)
 
     def add_character(self, sprite_path: str, size: Vector2, pos: Vector2, jump_dist: float, jump_height: float, jump_time: float, dash_dist: float, dash_time: float) -> None:
         from Objects import Character

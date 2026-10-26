@@ -5,7 +5,7 @@ from Utils import character_diff, Control, in_right_interval, direction, trunc_v
 from math import ceil
 
 class Character(BasicSprite):
-    def __init__(self, sprite_path: str, size: Vector2, pos: Vector2, jump_dist: float, jump_height: float, jump_time: float, dash_dist: float, dash_time: float) -> None:
+    def __init__(self, sprite_path: str, size: Vector2, pos: Vector2, jump_dist: float, jump_height: float, jump_time: float, dash_dist: float, dash_time: float, tilemap: Tilemap) -> None:
         super().__init__(sprite_path, size, pos)
         from Game import GAME
         from Physics import character_physics_controller as physics
@@ -15,6 +15,7 @@ class Character(BasicSprite):
         dash_speed = dash_dist / dash_time * GAME.fixed_dt()
 
         self.PHYSICS: physics = physics(self, speed, jump_force, gravity, dash_dist, dash_speed)
+        self.TILEMAP: Tilemap = tilemap
 
     def behaviour(self) -> None:
         keys, new_keys = pygame.key.get_pressed(), pygame.key.get_just_pressed()
@@ -46,7 +47,7 @@ class Character(BasicSprite):
 
     def death_check(self) -> None:
         from Game import GAME
-        hazard_contacts = GAME._level.TILEMAP.collides("hazard", self, False)
+        hazard_contacts = self.TILEMAP.collides("hazard", self, False)
         if(len(hazard_contacts) > 0):
             GAME.set_command(Control.restart_level())
 
@@ -136,37 +137,36 @@ class Tilemap:
         return collisions
 
 class Finish(BasicSprite):
-    def __init__(self, sprite_path: str | None, size: Vector2, pos: Vector2) -> None:
+    def __init__(self, sprite_path: str | None, size: Vector2, pos: Vector2, character: type[BasicSprite]) -> None:
         super().__init__(sprite_path, size, pos)
+        self.CHAR: type[BasicSprite] = character
 
     def fixed_step_behaviour(self) -> None:
         from Game import GAME
-        character = GAME._level.PLAYER
-        if(self.overlap(character)):
+        if(self.overlap(self.CHAR)):
             GAME.set_command(Control.close_level())
 
 class Collectable(BasicSprite):
-    def __init__(self, sprite_path: str | None, size: Vector2, pos: Vector2, diff: character_diff) -> None:
+    def __init__(self, sprite_path: str | None, size: Vector2, pos: Vector2, diff: character_diff, character: type[BasicSprite]) -> None:
         super().__init__(sprite_path, size, pos)
         self.DIFF: character_diff = diff
         self.is_collected: bool = False
+        self.CHAR: type[BasicSprite] = character
 
     def fixed_step_behaviour(self) -> None:
         from Game import GAME
-        character = GAME._level.PLAYER
-        collide_with_character = self.overlap(character)
+        collide_with_character = self.overlap(self.CHAR)
         if(collide_with_character and not self.is_collected):
-            character.give_air_jumps(self.DIFF.air_jumps)
-            character.increase_air_jumps(self.DIFF.def_air_jumps)
-            character.give_dashes(self.DIFF.dashes)
-            character.increase_dashes(self.DIFF.def_dashes)
+            self.CHAR.give_air_jumps(self.DIFF.air_jumps)
+            self.CHAR.increase_air_jumps(self.DIFF.def_air_jumps)
+            self.CHAR.give_dashes(self.DIFF.dashes)
+            self.CHAR.increase_dashes(self.DIFF.def_dashes)
             self.is_collected = True
-            GAME._level.collect_object(self)
 
 class MovingCollectable(Collectable):
-    def __init__(self, sprite_path: str | None, size: Vector2, pos: Vector2, diff: character_diff, speed: float, destination: Vector2) -> None:
+    def __init__(self, sprite_path: str | None, size: Vector2, pos: Vector2, diff: character_diff, speed: float, destination: Vector2, character: type[BasicSprite]) -> None:
         from Game import GAME
-        super().__init__(sprite_path, size, pos, diff)
+        super().__init__(sprite_path, size, pos, diff, character)
         self.SPEED: float = speed * GAME.fixed_dt()
         self.START: Vector2 = self.pos.copy()
         self.DESTINATION: Vector2 = destination

@@ -21,9 +21,8 @@
 3) Liskov substitution
 4) Interface segregation
 5) Dependancy inversion
-	- [ ] Level хранит отдельно информацию об игроке для других объектов - Level хранит массив объектов, объекты знают об этом массивы и отбирают оттуда объекты с которыми могут взаимодествовать
-	- [ ] Объекты обращаются к уровню через GameManager - см. пункт 1
-	- [ ] Character получает доступ к TilemapLayer через GameManager - в Character передаются TilemapLayer
+	- [x] Объекты обращаются к уровню через GameManager - Нужные для взаимодействия объекты передаются в конструктор
+	- [x] Character получает доступ к TilemapLayer через GameManager - См. предыдущий пункт
 
 ## Модуль 4
 - [x] Добавить ограничение на delta_time

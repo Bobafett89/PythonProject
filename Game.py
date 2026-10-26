@@ -224,7 +224,7 @@ class Level:
         self.GENERATOR: Callable[[], None] = generator
         self.TILEMAP: Tilemap = Tilemap(tilemap_size)
         self.OBJECTS: list[type[BasicSprite]] = []
-        self.COLLECTED: list[type[BasicSprite]] = []
+        self.COLLECTABLES: list[type[Collectable]] = []
         self.PLAYER: Character = None
 
     @classmethod
@@ -435,7 +435,7 @@ class Level:
         for i in range(GAME.fixed_steps()):
             for object in self.OBJECTS:
                 object.fixed_step_behaviour()
-        self.remove_collected_objects()
+        self.collect_items()
         pass
 
     def add_ground_tile(self, sprite_path: str, tile_pos: Vector2) -> None:
@@ -448,34 +448,33 @@ class Level:
         from Objects import Character
         if(self.PLAYER != None):
             raise RuntimeError("More than one character can't be spawned")
-        self.PLAYER = Character(sprite_path, size, pos, jump_dist, jump_height, jump_time, dash_dist, dash_time)
+        self.PLAYER = Character(sprite_path, size, pos, jump_dist, jump_height, jump_time, dash_dist, dash_time, self.TILEMAP)
         self.OBJECTS.append(self.PLAYER)
         self.SPRITES.add(self.PLAYER)
 
     def add_finish(self, sprite_path: str, size: Vector2, pos: Vector2) -> None:
         from Objects import Finish
-        finish = Finish(sprite_path, size, pos)
+        finish = Finish(sprite_path, size, pos, self.PLAYER)
         self.OBJECTS.append(finish)
         self.SPRITES.add(finish)
 
     def add_static_item(self, sprite_path: str, size: Vector2, pos: Vector2, diff: character_diff) -> None:
         from Objects import Collectable
-        collectable = Collectable(sprite_path, size, pos, diff)
+        collectable = Collectable(sprite_path, size, pos, diff, self.PLAYER)
         self.OBJECTS.append(collectable)
+        self.COLLECTABLES.append(collectable)
         self.SPRITES.add(collectable)
 
     def add_moving_item(self, sprite_path: str, size: Vector2, pos: Vector2, diff: character_diff, speed: float, destination: Vector2) -> None:
         from Objects import MovingCollectable
-        collectable = MovingCollectable(sprite_path, size, pos, diff, speed, destination)
+        collectable = MovingCollectable(sprite_path, size, pos, diff, speed, destination, self.PLAYER)
         self.OBJECTS.append(collectable)
+        self.COLLECTABLES.append(collectable)
         self.SPRITES.add(collectable)
 
-    def collect_object(self, object: type[BasicSprite]) -> None:
-        if(not object in self.COLLECTED):
-            self.COLLECTED.append(object)
-
-    def remove_collected_objects(self) -> None:
-        for object in self.COLLECTED:
-            self.OBJECTS.remove(object)
-            self.SPRITES.remove(object)
-        self.COLLECTED.clear()
+    def collect_items(self) -> None:
+        for object in self.COLLECTABLES:
+            if (object.is_collected):
+                self.OBJECTS.remove(object)
+                self.COLLECTABLES.remove(object)
+                self.SPRITES.remove(object)

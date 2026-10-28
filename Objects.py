@@ -41,7 +41,7 @@ class Character(BasicSprite):
         if(keys[pygame.K_w] and self.PHYSICS.JUMP.on_ground):
             self.PHYSICS.jump()
 
-        self.PHYSICS.collide(self._size, self._pos, self.TILEMAP.get_layer("ground"))
+        self.PHYSICS.collide(self.size, self.pos, self.TILEMAP.get_layer("ground"))
         self._move_by(self.PHYSICS.move())
         self.death_check()
 

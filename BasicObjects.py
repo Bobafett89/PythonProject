@@ -6,17 +6,17 @@ from os import path
 class BasicSprite(pygame.sprite.Sprite):
     def __init__(self, sprite_path: str | None, size: Vector2, pos: Vector2) -> None:
         super().__init__()
-        self._size: Vector2 = size
-        self._pos: Vector2 = pos
+        self.__size: Vector2 = size
+        self.__pos: Vector2 = pos
         self._load_image(sprite_path)
 
     @property
     def size(self) -> Vector2:
-        return self._size
+        return self.__size
 
     @property
     def pos(self) -> Vector2:
-        return self._pos
+        return self.__pos
 
     @property
     def edge_offset(self) -> Vector2:
@@ -30,32 +30,32 @@ class BasicSprite(pygame.sprite.Sprite):
     def botright(self) -> Vector2:
         return self.pos + self.edge_offset
 
-    def _set_center(self) -> None:
+    def __set_center(self) -> None:
         from Game import GAME
-        pos = round_vector2(vector2_mult(self.pos, GAME.screen_size()))
+        pos: Vector2 = round_vector2(vector2_mult(self.pos, GAME.screen_size()))
         self.rect = self.rect.move_to(center=pos)
 
     def _move_to(self, new_pos: Vector2) -> None:
-        self._pos = new_pos
-        self._set_center()
+        self.__pos = new_pos
+        self.__set_center()
 
     def _move_by(self, offset: Vector2) -> None:
         self._move_to(self.pos + offset)
 
-    def _rescale(self) -> None:
+    def __rescale(self) -> None:
         from Game import GAME
         size: Vector2 = round_vector2(vector2_mult(self.size, GAME.screen_size()))
         self.image = pygame.transform.scale(self.image, size)
         self.rect = self.image.get_rect()
-        self._set_center()
+        self.__set_center()
 
     def _set_size(self, new_size: Vector2) -> None:
-        self._size = new_size
-        self._rescale()
+        self.__size = new_size
+        self.__rescale()
 
     def _set_image(self, image: pygame.Surface) -> None:
         self.image = image
-        self._rescale()
+        self.__rescale()
 
     def _load_image(self, sprite_path: str | None) -> None:
         img: pygame.Surface = None

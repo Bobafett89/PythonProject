@@ -13,11 +13,11 @@ class character_physics_controller:
 
         def collide(self, obj: type[BasicSprite], ground: TilemapLayer) -> None:
             def hit_floor() -> None:
-                if(self.__VELOCITY.y > 0):
+                if (self.__VELOCITY.y > 0):
                     self.__JUMP.on_ground = True
-                    if(self.__JUMP.air_jumps < self.__JUMP.def_air_jumps):
+                    if (self.__JUMP.air_jumps < self.__JUMP.def_air_jumps):
                         self.__JUMP.air_jumps = self.__JUMP.def_air_jumps
-                    if(self.__DASH.count < self.__DASH.def_count):
+                    if (self.__DASH.count < self.__DASH.def_count):
                         self.__DASH.count = self.__DASH.def_count
 
             def hit_wall() -> None:
@@ -27,7 +27,7 @@ class character_physics_controller:
             def next_state() -> BasicSprite:
                 return BasicSprite(None, obj.size, obj.pos + self.__VELOCITY)
 
-            if(self.__VELOCITY.y != 0):
+            if (self.__VELOCITY.y != 0):
                 self.__JUMP.on_ground = False
             new_state = next_state()
             tiles = ground.collides(new_state, True)
@@ -36,11 +36,11 @@ class character_physics_controller:
                 min_dist = new_state.edge_offset + tile.edge_offset
                 dir = tile.pos - obj.pos
                 dist = abs_vector2(tile.pos - new_state.pos)
-                if(dist.x < min_dist.x and dist.y < min_dist.y):
+                if (dist.x < min_dist.x and dist.y < min_dist.y):
                     epsilon = 2 ** (-53)
                     size = min_dist - dist + Vector2(epsilon, epsilon)
                     offset = Vector2(0, 0)
-                    if(abs(dir.x) < min_dist.x or (size.x >= size.y and not abs(dir.y) < min_dist.y)):
+                    if (abs(dir.x) < min_dist.x or (size.x >= size.y and not abs(dir.y) < min_dist.y)):
                         offset.y = size.y * direction(dir.y < 0)
                         hit_floor()
                     else:

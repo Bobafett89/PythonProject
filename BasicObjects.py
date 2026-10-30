@@ -60,7 +60,7 @@ class BasicSprite(pygame.sprite.Sprite):
     def _load_image(self, sprite_path: str | None) -> None:
         img: pygame.Surface = None
         try:
-            if(sprite_path != None):
+            if (sprite_path != None):
                 img = pygame.image.load(path.join("Assets", sprite_path))
             else:
                 img = pygame.Surface(Vector2(0, 0), pygame.SRCALPHA)

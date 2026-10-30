@@ -66,7 +66,7 @@ class Button(BasicSprite):
         pressed: bool = False
         cursor_pos: Vector2 = vector2_div(Vector2(pygame.mouse.get_pos()), GAME.screen_size())
         new_keys: list[bool] = pygame.mouse.get_just_pressed()
-        if(new_keys[0] and in_interval(cursor_pos.x, self.topleft.x, self.botright.x) and in_interval(cursor_pos.y, self.topleft.y, self.botright.y)):
+        if (new_keys[0] and in_interval(cursor_pos.x, self.topleft.x, self.botright.x) and in_interval(cursor_pos.y, self.topleft.y, self.botright.y)):
             self.__CALLBACK()
             pressed = True
         return pressed

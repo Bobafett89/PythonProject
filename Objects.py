@@ -20,13 +20,13 @@ class Character(BasicSprite):
     def update(self) -> None:
         keys, new_keys = pygame.key.get_pressed(), pygame.key.get_just_pressed()
 
-        if(new_keys[pygame.K_LSHIFT]):
+        if (new_keys[pygame.K_LSHIFT]):
             self.PHYSICS.dash()
 
         dir = 1 * keys[pygame.K_d] - 1 * keys[pygame.K_a]
         self.PHYSICS.run(dir)
 
-        if(keys[pygame.K_w] and self.PHYSICS.JUMP.on_ground or new_keys[pygame.K_w]):
+        if (keys[pygame.K_w] and self.PHYSICS.JUMP.on_ground or new_keys[pygame.K_w]):
             self.PHYSICS.jump()
 
         self.__debug()
@@ -38,7 +38,7 @@ class Character(BasicSprite):
         dir = 1 * keys[pygame.K_d] - 1 * keys[pygame.K_a]
         self.PHYSICS.run(dir)
 
-        if(keys[pygame.K_w] and self.PHYSICS.JUMP.on_ground):
+        if (keys[pygame.K_w] and self.PHYSICS.JUMP.on_ground):
             self.PHYSICS.jump()
 
         self.PHYSICS.collide(self, self.TILEMAP.get_layer("ground"))
@@ -48,7 +48,7 @@ class Character(BasicSprite):
     def death_check(self) -> None:
         from Game import GAME
         hazard_contacts = self.TILEMAP.collides("hazard", self, False)
-        if(len(hazard_contacts) > 0):
+        if (len(hazard_contacts) > 0):
             GAME.set_command(Control.restart_level())
 
     def give_air_jumps(self, count: int) -> None:
@@ -65,13 +65,13 @@ class Character(BasicSprite):
 
     def __debug(self) -> None:
         keys, new_keys = pygame.key.get_pressed(), pygame.key.get_just_pressed()
-        if(keys[pygame.K_UP]):
+        if (keys[pygame.K_UP]):
             self.PHYSICS._character_physics_controller__VELOCITY.y = -self.PHYSICS.JUMP.force
-        if(keys[pygame.K_DOWN]):
+        if (keys[pygame.K_DOWN]):
             self.PHYSICS._character_physics_controller__VELOCITY.y = self.PHYSICS.JUMP.force
-        if(new_keys[pygame.K_1]):
+        if (new_keys[pygame.K_1]):
            self.increase_air_jumps(1)
-        if(new_keys[pygame.K_2]):
+        if (new_keys[pygame.K_2]):
            self.increase_dashes(1)
 
 class Tilemap:
@@ -122,17 +122,17 @@ class TilemapLayer:
         return vector2_mult(pos, self._SIZE)
 
     def add_tile(self, sprite_path: str, tile_pos: Vector2) -> None:
-        if(self._MAP[int(tile_pos.x)][int(tile_pos.y)] == None):
+        if (self._MAP[int(tile_pos.x)][int(tile_pos.y)] == None):
             pos = self._convert_to_screen(tile_pos + Vector2(0.5, 0.5))
             tile = BasicSprite(sprite_path, self._TILESIZE, pos)
             self._SPRITES.add(tile)
             self._MAP[int(tile_pos.x)][int(tile_pos.y)] = tile
 
     def get_tile(self, tile_pos: Vector2, pseudo_tile: bool) -> BasicSprite | None:
-        if(in_right_interval(tile_pos.x, 0, self._SIZE.x) and in_right_interval(tile_pos.y, 0, self._SIZE.y)):
+        if (in_right_interval(tile_pos.x, 0, self._SIZE.x) and in_right_interval(tile_pos.y, 0, self._SIZE.y)):
             return self._MAP[int(tile_pos.x)][int(tile_pos.y)]
         else:
-            if(pseudo_tile):
+            if (pseudo_tile):
                 pos = self._convert_to_screen(tile_pos + Vector2(0.5, 0.5))
                 return BasicSprite(None, self._TILESIZE, pos)
             else:
@@ -147,7 +147,7 @@ class TilemapLayer:
             for j in range(int(-tile_offset.y), int(tile_offset.y) + 1):
                 offset = Vector2(i, j)
                 tile = self.get_tile(tilemap_pos + offset, pseudo_tiles)
-                if(tile != None and tile.overlap(object)):
+                if (tile != None and tile.overlap(object)):
                     collisions.append(tile)
         return collisions
 
@@ -158,7 +158,7 @@ class Finish(BasicSprite):
 
     def fixed_update(self) -> None:
         from Game import GAME
-        if(self.overlap(self.CHAR)):
+        if (self.overlap(self.CHAR)):
             GAME.set_command(Control.close_level())
 
 class Collectable(BasicSprite):
@@ -170,7 +170,7 @@ class Collectable(BasicSprite):
 
     def fixed_update(self) -> None:
         collide_with_character = self.overlap(self.CHAR)
-        if(collide_with_character and not self.is_collected):
+        if (collide_with_character and not self.is_collected):
             self.CHAR.give_air_jumps(self.DIFF.air_jumps)
             self.CHAR.increase_air_jumps(self.DIFF.def_air_jumps)
             self.CHAR.give_dashes(self.DIFF.dashes)
@@ -189,13 +189,13 @@ class MovingCollectable(Collectable):
 
     def fixed_update(self) -> None:
         target: Vector2 = None
-        if(self.to_end):
+        if (self.to_end):
             target = self.DESTINATION
         else:
             target = self.START
         left = (target - self.pos).length()
         offset = self.DIR.copy() * direction(self.to_end)
-        if(self.SPEED < left):
+        if (self.SPEED < left):
             offset *= self.SPEED
         else:
             offset *= left

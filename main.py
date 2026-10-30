@@ -50,13 +50,13 @@ def level_selection() -> UI_Screen:
             pages[page].add_text(level_name, text_size, text_pos)
         return_pos = Vector2(0.5, calc_pos(Vector2(0, grid.y - 1)).y)
         pages[page].add_button("", button_size, return_pos, open_main_menu)
-    if(pages_count > 1):
+    if (pages_count > 1):
         for page in range(len(pages)):
-            if(page < len(pages) - 1):
+            if (page < len(pages) - 1):
                 grid_pos = grid - Vector2(1, 1)
                 next_pos = calc_pos(grid_pos)
                 pages[page].add_button("", button_size, next_pos, switch_to(pages[page+1]))
-            if(page > 0):
+            if (page > 0):
                 grid_pos = Vector2(0, grid.y - 1)
                 back_pos = calc_pos(grid_pos)
                 pages[page].add_button("", button_size, back_pos, switch_to(pages[page-1]))
@@ -78,9 +78,9 @@ while GAME.active():
             GAME.set_command(Control.close_game())
         if event.type == pygame.KEYDOWN:
             keys = pygame.key.get_pressed()
-            if(keys[pygame.K_ESCAPE]):
+            if (keys[pygame.K_ESCAPE]):
                 GAME.set_command(Control.close_level())
-            if(keys[pygame.K_END]):
+            if (keys[pygame.K_END]):
                 GAME.set_command(Control.close_game())
 
     GAME.update()

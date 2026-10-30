@@ -48,7 +48,7 @@ class GAME:
 
     @classmethod
     def set_command(cls, command: Control) -> None:
-        if(command.command.value > cls._control.command.value):
+        if (command.command.value > cls._control.command.value):
             cls._control = command
 
     @classmethod
@@ -229,12 +229,12 @@ class Level:
     def parse_level(cls, level_struct: dict) -> Callable[[], None]:
         def has_keys(keys: list[str] | str, where: dict, type: type | tuple[type, ...]) -> bool:
             has: bool = None
-            if(isinstance(keys, str)):
+            if (isinstance(keys, str)):
                 has = keys in where and isinstance(where[keys], type)
             else:
                 has = True
                 for key in keys:
-                    if(not (key in where and isinstance(where[key], type))):
+                    if (not (key in where and isinstance(where[key], type))):
                         has = False
                         break
             return has
@@ -244,17 +244,17 @@ class Level:
 
         def validate_list(arr: list, size: int, type: type) -> bool:
             valid = False
-            if(len(arr) == size or size == 0):
+            if (len(arr) == size or size == 0):
                 valid = True
                 for element in arr:
-                    if(not isinstance(element, type)):
+                    if (not isinstance(element, type)):
                         valid = False
                         break
             return valid
 
         def validate_point(pos: list, is_int: bool = False) -> bool:
             pos_type: type | tuple[type, ...] = None
-            if(is_int):
+            if (is_int):
                 pos_type = int
             else:
                 pos_type = (int, float)
@@ -262,11 +262,11 @@ class Level:
 
         def validate_poses(poses: list, is_int: bool = False, include_lines: bool = False) -> bool:
             valid = validate_list(poses, 0, list)
-            if(valid):
+            if (valid):
                 for pos in poses:
                     valid_point = validate_point(pos, is_int)
                     valid_line = include_lines and validate_list(pos, 2, list) and validate_point(pos[0], is_int) and validate_point(pos[1], is_int)
-                    if(not (valid_point or valid_line)):
+                    if (not (valid_point or valid_line)):
                         valid = False
                         break
             return valid
@@ -286,7 +286,7 @@ class Level:
                 valid_sprite = has_sprite(tile)
                 valid_pos = has_keys("pos", tile, list) and validate_poses(tile["pos"], True, True)
                 valid_tilemap = valid_sprite and valid_pos
-                if(not valid_tilemap):
+                if (not valid_tilemap):
                     break
             return valid_tilemap
 
@@ -299,7 +299,7 @@ class Level:
             def build_tilemap(tilemap: list[dict], add_tile: Callable[[str, Vector2], None]):
                 for tile in tilemap:
                     for pos in tile["pos"]:
-                        if(isinstance(pos[0], list)):
+                        if (isinstance(pos[0], list)):
                             first_pos = point_to_vector(pos[0])
                             second_pos = point_to_vector(pos[1])
                             leftop = Vector2(min(first_pos.x, second_pos.x), min(first_pos.y, second_pos.y))
@@ -360,7 +360,7 @@ class Level:
         valid_tiles = has_keys("tilemap_size", level_struct, list) and validate_point(level_struct["tilemap_size"], True)
 
         valid_char = has_keys("char", level_struct, dict)
-        if(valid_char):
+        if (valid_char):
             char = level_struct["char"]
             valid_sprite = has_sprite(char)
             valid_size = has_valid_size(char)
@@ -370,39 +370,39 @@ class Level:
             valid_char = valid_sprite and valid_size and valid_pos and valid_jump and valid_dash
 
         tiles = dict()
-        if(has_keys("tiles", level_struct, dict)):
+        if (has_keys("tiles", level_struct, dict)):
             tiles = level_struct["tiles"]
         valid_ground = has_keys("grnd", tiles, list) and validate_list(tiles["grnd"], 0, dict) and validate_tilemap(tiles["grnd"])
         valid_hazard = has_keys("hzrd", tiles, list) and validate_list(tiles["hzrd"], 0, dict) and validate_tilemap(tiles["hzrd"])
 
         valid_finishes = has_keys("finishes", level_struct, list) and validate_list(level_struct["finishes"], 0, dict)
         valid_finishes = valid_finishes and len(level_struct["finishes"]) > 0
-        if(valid_finishes):
+        if (valid_finishes):
             for finish in level_struct["finishes"]:
                 valid_spr = has_sprite(finish)
                 valid_size = has_valid_size(finish)
                 valid_pos = has_valid_poses(finish)
                 valid_finishes = valid_spr and valid_size and valid_pos
-                if(not valid_finishes):
+                if (not valid_finishes):
                     break
 
         items = dict()
-        if(has_keys("items", level_struct, dict)):
+        if (has_keys("items", level_struct, dict)):
             items = level_struct["items"]
 
         valid_static_items = has_keys("stc", items, list) and validate_list(items["stc"], 0, dict)
-        if(valid_static_items):
+        if (valid_static_items):
             for item in items["stc"]:
                 valid_sprite = has_sprite(item)
                 valid_size = has_valid_size(item)
                 valid_diff = has_keys("diff", item, list) and validate_list(item["diff"], 4, int)
                 valid_pos = has_valid_poses(item)
                 valid_static_items = valid_sprite and valid_size and valid_diff and valid_pos
-                if(not valid_static_items):
+                if (not valid_static_items):
                     break
 
         valid_moving_items = has_keys("mov", items, list) and validate_list(items["mov"], 0, dict)
-        if(valid_moving_items):
+        if (valid_moving_items):
             for item in items["mov"]:
                 valid_sprite = has_sprite(item)
                 valid_size = has_valid_size(item)
@@ -411,12 +411,12 @@ class Level:
                 valid_pos = has_valid_poses(item)
                 valid_dest = valid_pos and has_keys("dest", item, list) and len(item["dest"]) == len(item["pos"]) and validate_poses(item["dest"])
                 valid_moving_items = valid_sprite and valid_diff and valid_pos and valid_time and valid_dest
-                if(not valid_moving_items):
+                if (not valid_moving_items):
                     break
 
         valid_tilemaps = valid_tiles and valid_ground and valid_hazard
         valid_items = valid_static_items and valid_moving_items
-        if(not (valid_size_factor and valid_char and valid_tilemaps and valid_finishes and valid_items)):
+        if (not (valid_size_factor and valid_char and valid_tilemaps and valid_finishes and valid_items)):
             raise RuntimeError("Not valid structure of a level")
 
         return generator
@@ -443,7 +443,7 @@ class Level:
 
     def add_character(self, sprite_path: str, size: Vector2, pos: Vector2, jump_dist: float, jump_height: float, jump_time: float, dash_dist: float, dash_time: float) -> None:
         from Objects import Character
-        if(self.PLAYER != None):
+        if (self.PLAYER != None):
             raise RuntimeError("More than one character can't be spawned")
         self.PLAYER = Character(sprite_path, size, pos, jump_dist, jump_height, jump_time, dash_dist, dash_time, self.TILEMAP)
         self.OBJECTS.append(self.PLAYER)

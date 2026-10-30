@@ -73,7 +73,7 @@ class Tilemap:
         self.__LAYERS: dict[TilemapLayer] = dict()
 
     @property
-    def size(self) -> Vector2:
+    def SIZE(self) -> Vector2:
         return self.__SIZE
 
     @property

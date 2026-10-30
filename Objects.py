@@ -41,7 +41,7 @@ class Character(BasicSprite):
         if(keys[pygame.K_w] and self.PHYSICS.JUMP.on_ground):
             self.PHYSICS.jump()
 
-        self.PHYSICS.collide(self.size, self.pos, self.TILEMAP.get_layer("ground"))
+        self.PHYSICS.collide(self, self.TILEMAP.get_layer("ground"))
         self._move_by(self.PHYSICS.move())
         self.death_check()
 
@@ -66,9 +66,9 @@ class Character(BasicSprite):
     def __debug(self) -> None:
         keys, new_keys = pygame.key.get_pressed(), pygame.key.get_just_pressed()
         if(keys[pygame.K_UP]):
-            self.PHYSICS.VELOCITY.y = -self.PHYSICS.JUMP.force
+            self.PHYSICS._character_physics_controller__VELOCITY.y = -self.PHYSICS.JUMP.force
         if(keys[pygame.K_DOWN]):
-            self.PHYSICS.VELOCITY.y = self.PHYSICS.JUMP.force
+            self.PHYSICS._character_physics_controller__VELOCITY.y = self.PHYSICS.JUMP.force
         if(new_keys[pygame.K_1]):
            self.increase_air_jumps(1)
         if(new_keys[pygame.K_2]):

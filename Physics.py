@@ -1,40 +1,40 @@
 from pygame import Vector2
+from BasicObjects import BasicSprite
 from Utils import jump_struct, dash_struct, direction, abs_vector2
 
 class character_physics_controller:
         def __init__(self, speed: float, jump_force: float, gravity: float, dash_dist: float, dash_speed: float) -> None:
-            self.VELOCITY: Vector2 = Vector2(0, 0)
-            self.GRAVITY: float = gravity
-            self.JUMP: jump_struct = jump_struct(force=jump_force)
-            self.DASH: dash_struct = dash_struct(distance=dash_dist, speed=dash_speed)
-            self.SPEED: float = speed
-            self.dir: float = 1
+            self.__VELOCITY: Vector2 = Vector2(0, 0)
+            self.__GRAVITY: float = gravity
+            self.__JUMP: jump_struct = jump_struct(force=jump_force)
+            self.__DASH: dash_struct = dash_struct(distance=dash_dist, speed=dash_speed)
+            self.__SPEED: float = speed
+            self.__dir: float = 1
 
-        def collide(self, obj_size: Vector2, obj_pos: Vector2, ground: TilemapLayer) -> None:
-            from BasicObjects import BasicSprite
+        def collide(self, obj: type[BasicSprite], ground: TilemapLayer) -> None:
             def hit_floor() -> None:
-                if(self.VELOCITY.y > 0):
-                    self.JUMP.on_ground = True
-                    if(self.JUMP.air_jumps < self.JUMP.def_air_jumps):
-                        self.JUMP.air_jumps = self.JUMP.def_air_jumps
-                    if(self.DASH.count < self.DASH.def_count):
-                        self.DASH.count = self.DASH.def_count
+                if(self.__VELOCITY.y > 0):
+                    self.__JUMP.on_ground = True
+                    if(self.__JUMP.air_jumps < self.__JUMP.def_air_jumps):
+                        self.__JUMP.air_jumps = self.__JUMP.def_air_jumps
+                    if(self.__DASH.count < self.__DASH.def_count):
+                        self.__DASH.count = self.__DASH.def_count
 
             def hit_wall() -> None:
-                self.DASH.is_active = False
-                self.DASH.destination = None
+                self.__DASH.is_active = False
+                self.__DASH.destination = None
 
             def next_state() -> BasicSprite:
-                return BasicSprite(None, obj_size, obj_pos + self.VELOCITY)
+                return BasicSprite(None, obj.size, obj.pos + self.__VELOCITY)
 
-            if(self.VELOCITY.y != 0):
-                self.JUMP.on_ground = False
+            if(self.__VELOCITY.y != 0):
+                self.__JUMP.on_ground = False
             new_state = next_state()
             tiles = ground.collides(new_state, True)
-            tiles.sort(key=(lambda tile: (tile.pos - obj_pos).length()))
+            tiles.sort(key = (lambda tile: (tile.pos - obj.pos).length()))
             for tile in tiles:
                 min_dist = new_state.edge_offset + tile.edge_offset
-                dir = tile.pos - obj_pos
+                dir = tile.pos - obj.pos
                 dist = abs_vector2(tile.pos - new_state.pos)
                 if(dist.x < min_dist.x and dist.y < min_dist.y):
                     epsilon = 2 ** (-53)
@@ -46,42 +46,42 @@ class character_physics_controller:
                     else:
                         offset.x = size.x * direction(dir.x < 0)
                         hit_wall()
-                    self.VELOCITY += offset
+                    self.__VELOCITY += offset
                     new_state = next_state()
 
         def apply_grav(self) -> None:
-            if(not self.DASH.is_active):
-                self.VELOCITY.y += self.GRAVITY
+            if (not self.__DASH.is_active):
+                self.__VELOCITY.y += self.__GRAVITY
             else:
-                self.VELOCITY.y = 0
-                self.JUMP.on_ground = False
+                self.__VELOCITY.y = 0
+                self.__JUMP.on_ground = False
 
         def run(self, dir: float) -> None:
-            if(not self.DASH.is_active):
-                self.VELOCITY.x = self.SPEED * dir
+            if (not self.__DASH.is_active):
+                self.__VELOCITY.x = self.__SPEED * dir
 
         def dash(self) -> None:
-            dash = self.DASH
-            if(not dash.is_active and dash.count > 0):
+            dash = self.__DASH
+            if (not dash.is_active and dash.count > 0):
                 dash.is_active = True
                 dash.left = dash.distance
                 dash.count -= 1
-                self.VELOCITY.x = dash.speed * self.dir
+                self.__VELOCITY.x = dash.speed * self.__dir
 
         def jump(self) -> None:
-            if(not self.DASH.is_active):
-                if(self.JUMP.on_ground or self.JUMP.air_jumps > 0):
-                    self.VELOCITY.y = -self.JUMP.force
-                    if(not self.JUMP.on_ground):
-                        self.JUMP.air_jumps -= 1
+            if (not self.__DASH.is_active):
+                if (self.__JUMP.on_ground or self.__JUMP.air_jumps > 0):
+                    self.__VELOCITY.y = -self.__JUMP.force
+                    if (not self.__JUMP.on_ground):
+                        self.__JUMP.air_jumps -= 1
 
         def move(self) -> Vector2:
-            if(self.VELOCITY.x != 0):
-                self.dir = direction(self.VELOCITY.x > 0)
-                dash = self.DASH
-                if(dash.is_active):
-                    if(abs(self.VELOCITY.x) >= dash.left):
-                        self.VELOCITY.x = dash.left * self.dir
+            if (self.__VELOCITY.x != 0):
+                self.__dir = direction(self.__VELOCITY.x > 0)
+                dash = self.__DASH
+                if (dash.is_active):
+                    if (abs(self.__VELOCITY.x) >= dash.left):
+                        self.__VELOCITY.x = dash.left * self.__dir
                         dash.is_active = False
-                    dash.left -= abs(self.VELOCITY.x)
-            return self.VELOCITY
+                    dash.left -= abs(self.__VELOCITY.x)
+            return self.__VELOCITY

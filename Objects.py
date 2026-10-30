@@ -14,133 +14,124 @@ class Character(BasicSprite):
         speed = jump_dist / (2 * jump_time) * GAME.fixed_dt()
         dash_speed = dash_dist / dash_time * GAME.fixed_dt()
 
-        self.PHYSICS: physics = physics(speed, jump_force, gravity, dash_dist, dash_speed)
-        self.TILEMAP: Tilemap = tilemap
+        self.__PHYSICS: physics = physics(speed, jump_force, gravity, dash_dist, dash_speed)
+        self.__TILEMAP: Tilemap = tilemap
 
     def update(self) -> None:
         keys, new_keys = pygame.key.get_pressed(), pygame.key.get_just_pressed()
 
         if (new_keys[pygame.K_LSHIFT]):
-            self.PHYSICS.dash()
+            self.__PHYSICS.dash()
 
         dir = 1 * keys[pygame.K_d] - 1 * keys[pygame.K_a]
-        self.PHYSICS.run(dir)
+        self.__PHYSICS.run(dir)
 
-        if (keys[pygame.K_w] and self.PHYSICS.JUMP.on_ground or new_keys[pygame.K_w]):
-            self.PHYSICS.jump()
+        if (keys[pygame.K_w] and self.__PHYSICS.on_ground or new_keys[pygame.K_w]):
+            self.__PHYSICS.jump()
 
         self.__debug()
 
     def fixed_update(self) -> None:
-        self.PHYSICS.apply_grav()
+        self.__PHYSICS.apply_grav()
 
         keys = pygame.key.get_pressed()
         dir = 1 * keys[pygame.K_d] - 1 * keys[pygame.K_a]
-        self.PHYSICS.run(dir)
+        self.__PHYSICS.run(dir)
 
-        if (keys[pygame.K_w] and self.PHYSICS.JUMP.on_ground):
-            self.PHYSICS.jump()
+        if (keys[pygame.K_w] and self.__PHYSICS.on_ground):
+            self.__PHYSICS.jump()
 
-        self.PHYSICS.collide(self, self.TILEMAP.get_layer("ground"))
-        self._move_by(self.PHYSICS.move())
+        self.__PHYSICS.collide(self, self.__TILEMAP.get_layer("ground"))
+        self._move_by(self.__PHYSICS.move())
         self.death_check()
 
     def death_check(self) -> None:
         from Game import GAME
-        hazard_contacts = self.TILEMAP.collides("hazard", self, False)
+        hazard_contacts = self.__TILEMAP.collides("hazard", self, False)
         if (len(hazard_contacts) > 0):
             GAME.set_command(Control.restart_level())
 
-    def give_air_jumps(self, count: int) -> None:
-        self.PHYSICS.JUMP.air_jumps += count
-
-    def give_dashes(self, count: int) -> None:
-        self.PHYSICS.DASH.count += count
-
-    def increase_air_jumps(self, count: int) -> None:
-        self.PHYSICS.JUMP.def_air_jumps += count
-
-    def increase_dashes(self, count: int) -> None:
-        self.PHYSICS.DASH.def_count += count
+    def apply_diff(self, diff: chacracter_diff):
+        self.__PHYSICS.apply_diff(diff)
 
     def __debug(self) -> None:
         keys, new_keys = pygame.key.get_pressed(), pygame.key.get_just_pressed()
         if (keys[pygame.K_UP]):
-            self.PHYSICS._character_physics_controller__VELOCITY.y = -self.PHYSICS.JUMP.force
+            self.__PHYSICS._character_physics_controller__VELOCITY.y = -self.__PHYSICS._character_physics_controller__JUMP.force
         if (keys[pygame.K_DOWN]):
-            self.PHYSICS._character_physics_controller__VELOCITY.y = self.PHYSICS.JUMP.force
+            self.__PHYSICS._character_physics_controller__VELOCITY.y = self.__PHYSICS._character_physics_controller__JUMP.force
         if (new_keys[pygame.K_1]):
-           self.increase_air_jumps(1)
+            self.__PHYSICS._character_physics_controller__JUMP.def_air_jumps += 1
         if (new_keys[pygame.K_2]):
-           self.increase_dashes(1)
+            self.__PHYSICS._character_physics_controller__DASH.def_count += 1
 
 class Tilemap:
     def __init__(self, size: Vector2) -> None:
-        self._SIZE: Vector2 = size
-        self._TILESIZE: Vector2 = vector2_div(Vector2(1, 1), self._SIZE)
-        self._SPRITES: pygame.sprite.Group = pygame.sprite.Group()
-        self.LAYERS: dict[TilemapLayer] = dict()
+        self.__SIZE: Vector2 = size
+        self.__TILESIZE: Vector2 = vector2_div(Vector2(1, 1), self.__SIZE)
+        self.__SPRITES: pygame.sprite.Group = pygame.sprite.Group()
+        self.__LAYERS: dict[TilemapLayer] = dict()
 
     @property
     def size(self) -> Vector2:
-        return self._SIZE
+        return self.__SIZE
 
     @property
     def SPRITES(self) -> pygame.sprite.Group:
-        return self._SPRITES
+        return self.__SPRITES
 
     def add_layer(self, name: str) -> None:
-        self.LAYERS[name] = TilemapLayer(self._SIZE, self._SPRITES)
+        self.__LAYERS[name] = TilemapLayer(self.__SIZE, self.__SPRITES)
 
     def get_layer(self, name: str) -> TilemapLayer:
-        return self.LAYERS[name]
+        return self.__LAYERS[name]
 
     def add_tile(self, sprite_path: str, layer_name: str, tile_pos: Vector2) -> None:
-        self.LAYERS[layer_name].add_tile(sprite_path, tile_pos)
+        self.__LAYERS[layer_name].add_tile(sprite_path, tile_pos)
 
     def get_tile(self, layer_name: str, tile_pos: Vector2, pseudo_tile: bool) -> BasicSprite | None:
-        return self.LAYERS[layer_name].get_tile(tile_pos, pseudo_tile)
+        return self.__LAYERS[layer_name].get_tile(tile_pos, pseudo_tile)
 
     def collides(self, layer_name: str, object: type[BasicSprite], pseudo_tiles: bool) -> list[BasicSprite]:
-        return self.LAYERS[layer_name].collides(object, pseudo_tiles)
+        return self.__LAYERS[layer_name].collides(object, pseudo_tiles)
 
 class TilemapLayer:
     def __init__(self, size: Vector2, sprite_group: pygame.sprite.Group) -> None:
-        self._SIZE: Vector2 = size
-        self._TILESIZE: Vector2 = vector2_div(Vector2(1, 1), self._SIZE)
-        self._SPRITES: pygame.sprite.Group = sprite_group
-        self._MAP: list[list[BasicSprite]] = []
-        for i in range(int(self._SIZE.x)):
-            self._MAP.append([])
-            for j in range(int(self._SIZE.y)):
-                self._MAP[i].append(None)
+        self.__SIZE: Vector2 = size
+        self.__TILESIZE: Vector2 = vector2_div(Vector2(1, 1), self.__SIZE)
+        self.__SPRITES: pygame.sprite.Group = sprite_group
+        self.__MAP: list[list[BasicSprite]] = []
+        for i in range(int(self.__SIZE.x)):
+            self.__MAP.append([])
+            for j in range(int(self.__SIZE.y)):
+                self.__MAP[i].append(None)
 
-    def _convert_to_screen(self, pos: Vector2) -> Vector2:
-        return vector2_div(pos, self._SIZE)
+    def __convert_to_screen(self, pos: Vector2) -> Vector2:
+        return vector2_div(pos, self.__SIZE)
 
-    def _convert_to_tilemap(self, pos: Vector2) -> Vector2:
-        return vector2_mult(pos, self._SIZE)
+    def __convert_to_tilemap(self, pos: Vector2) -> Vector2:
+        return vector2_mult(pos, self.__SIZE)
 
     def add_tile(self, sprite_path: str, tile_pos: Vector2) -> None:
-        if (self._MAP[int(tile_pos.x)][int(tile_pos.y)] == None):
-            pos = self._convert_to_screen(tile_pos + Vector2(0.5, 0.5))
-            tile = BasicSprite(sprite_path, self._TILESIZE, pos)
-            self._SPRITES.add(tile)
-            self._MAP[int(tile_pos.x)][int(tile_pos.y)] = tile
+        if (self.__MAP[int(tile_pos.x)][int(tile_pos.y)] == None):
+            pos = self.__convert_to_screen(tile_pos + Vector2(0.5, 0.5))
+            tile = BasicSprite(sprite_path, self.__TILESIZE, pos)
+            self.__SPRITES.add(tile)
+            self.__MAP[int(tile_pos.x)][int(tile_pos.y)] = tile
 
     def get_tile(self, tile_pos: Vector2, pseudo_tile: bool) -> BasicSprite | None:
-        if (in_right_interval(tile_pos.x, 0, self._SIZE.x) and in_right_interval(tile_pos.y, 0, self._SIZE.y)):
-            return self._MAP[int(tile_pos.x)][int(tile_pos.y)]
+        if (in_right_interval(tile_pos.x, 0, self.__SIZE.x) and in_right_interval(tile_pos.y, 0, self.__SIZE.y)):
+            return self.__MAP[int(tile_pos.x)][int(tile_pos.y)]
         else:
             if (pseudo_tile):
-                pos = self._convert_to_screen(tile_pos + Vector2(0.5, 0.5))
-                return BasicSprite(None, self._TILESIZE, pos)
+                pos = self.__convert_to_screen(tile_pos + Vector2(0.5, 0.5))
+                return BasicSprite(None, self.__TILESIZE, pos)
             else:
                 return None
 
     def collides(self, object: type[BasicSprite], pseudo_tiles: bool) -> list[BasicSprite]:
-        tilemap_pos = trunc_vector2(self._convert_to_tilemap(object.pos))
-        border_offset = self._convert_to_tilemap(object.edge_offset)
+        tilemap_pos = trunc_vector2(self.__convert_to_tilemap(object.pos))
+        border_offset = self.__convert_to_tilemap(object.edge_offset)
         tile_offset = Vector2(ceil(border_offset.x), ceil(border_offset.y))
         collisions = []
         for i in range(int(-tile_offset.x), int(tile_offset.x) + 1):
@@ -154,51 +145,52 @@ class TilemapLayer:
 class Finish(BasicSprite):
     def __init__(self, sprite_path: str | None, size: Vector2, pos: Vector2, character: type[BasicSprite]) -> None:
         super().__init__(sprite_path, size, pos)
-        self.CHAR: type[BasicSprite] = character
+        self.__CHAR: type[BasicSprite] = character
 
     def fixed_update(self) -> None:
         from Game import GAME
-        if (self.overlap(self.CHAR)):
+        if (self.overlap(self.__CHAR)):
             GAME.set_command(Control.close_level())
 
 class Collectable(BasicSprite):
-    def __init__(self, sprite_path: str | None, size: Vector2, pos: Vector2, diff: character_diff, character: type[BasicSprite]) -> None:
+    def __init__(self, sprite_path: str | None, size: Vector2, pos: Vector2, diff: character_diff, character: type[Character]) -> None:
         super().__init__(sprite_path, size, pos)
-        self.DIFF: character_diff = diff
-        self.is_collected: bool = False
-        self.CHAR: type[BasicSprite] = character
+        self.__DIFF: character_diff = diff
+        self.__is_collected: bool = False
+        self.__CHAR: type[Character] = character
+
+    @property
+    def is_collected(self) -> bool:
+        return self.__is_collected
 
     def fixed_update(self) -> None:
-        collide_with_character = self.overlap(self.CHAR)
+        collide_with_character = self.overlap(self.__CHAR)
         if (collide_with_character and not self.is_collected):
-            self.CHAR.give_air_jumps(self.DIFF.air_jumps)
-            self.CHAR.increase_air_jumps(self.DIFF.def_air_jumps)
-            self.CHAR.give_dashes(self.DIFF.dashes)
-            self.CHAR.increase_dashes(self.DIFF.def_dashes)
-            self.is_collected = True
+            self.__CHAR.apply_diff(self.__DIFF)
+            self.__is_collected = True
 
 class MovingCollectable(Collectable):
-    def __init__(self, sprite_path: str | None, size: Vector2, pos: Vector2, diff: character_diff, speed: float, destination: Vector2, character: type[BasicSprite]) -> None:
+    def __init__(self, sprite_path: str | None, size: Vector2, pos: Vector2, diff: character_diff, speed: float, destination: Vector2, character: type[Character]) -> None:
         from Game import GAME
         super().__init__(sprite_path, size, pos, diff, character)
-        self.SPEED: float = speed * GAME.fixed_dt()
-        self.START: Vector2 = self.pos.copy()
-        self.DESTINATION: Vector2 = destination
-        self.DIR: Vector2 = (self.DESTINATION - self.START).normalize()
-        self.to_end: bool = True
+        self.__SPEED: float = speed * GAME.fixed_dt()
+        self.__START: Vector2 = self.pos.copy()
+        self.__DESTINATION: Vector2 = destination
+        self.__DIR: Vector2 = (self.__DESTINATION - self.__START).normalize()
+        self.__to_end: bool = True
 
     def fixed_update(self) -> None:
         target: Vector2 = None
-        if (self.to_end):
-            target = self.DESTINATION
+        if (self.__to_end):
+            target = self.__DESTINATION
         else:
-            target = self.START
+            target = self.__START
         left = (target - self.pos).length()
-        offset = self.DIR.copy() * direction(self.to_end)
-        if (self.SPEED < left):
-            offset *= self.SPEED
+        offset = self.__DIR.copy() * direction(self.__to_end)
+        if (self.__SPEED < left):
+            offset *= self.__SPEED
         else:
             offset *= left
-            self.to_end = not self.to_end
+            self.__to_end = not self.__to_end
         self._move_by(offset)
         super().fixed_update()

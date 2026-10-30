@@ -1,6 +1,6 @@
 from pygame import Vector2
 from BasicObjects import BasicSprite
-from Utils import jump_struct, dash_struct, direction, abs_vector2
+from Utils import jump_struct, dash_struct, direction, abs_vector2, character_diff
 
 class character_physics_controller:
         def __init__(self, speed: float, jump_force: float, gravity: float, dash_dist: float, dash_speed: float) -> None:
@@ -10,6 +10,16 @@ class character_physics_controller:
             self.__DASH: dash_struct = dash_struct(distance=dash_dist, speed=dash_speed)
             self.__SPEED: float = speed
             self.__dir: float = 1
+
+        @property
+        def on_ground(self) -> bool:
+            return self.__JUMP.on_ground
+
+        def apply_diff(self, diff: character_diff) -> None:
+            self.__JUMP.air_jumps += diff.air_jumps
+            self.__JUMP.def_air_jumps += diff.def_air_jumps
+            self.__DASH.count += diff.dashes
+            self.__DASH.def_count += diff.def_dashes
 
         def collide(self, obj: type[BasicSprite], ground: TilemapLayer) -> None:
             def hit_floor() -> None:

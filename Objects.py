@@ -1,20 +1,20 @@
 import pygame
 from pygame import Vector2
-from BasicObjects import BasicSprite
-from Utils import character_diff, Control, in_right_interval, direction, trunc_vector2, vector2_div, vector2_mult
+from BasicObjects import BasicSprite, character_diff, Control, jump_params, dash_params
+from BasicObjects import character_physics_controller as physics
+from Utils import in_right_interval, direction, trunc_vector2, vector2_div, vector2_mult
 from math import ceil
 
 class Character(BasicSprite):
-    def __init__(self, sprite_path: str, size: Vector2, pos: Vector2, jump_dist: float, jump_height: float, jump_time: float, dash_dist: float, dash_time: float, tilemap: Tilemap) -> None:
+    def __init__(self, sprite_path: str, size: Vector2, pos: Vector2, jump: jump_params, dash: dash_params, tilemap: Tilemap) -> None:
         super().__init__(sprite_path, size, pos)
         from Game import GAME
-        from Physics import character_physics_controller as physics
-        jump_force = 2 * jump_height / jump_time * GAME.fixed_dt()
-        gravity = (2 * jump_height / jump_time) / jump_time * (GAME.fixed_dt() ** 2)
-        speed = jump_dist / (2 * jump_time) * GAME.fixed_dt()
-        dash_speed = dash_dist / dash_time * GAME.fixed_dt()
+        jump_force = 2 * jump.height / jump.time * GAME.FIXED_DT()
+        gravity = (2 * jump.height / jump.time) / jump.time * (GAME.FIXED_DT() ** 2)
+        speed = jump.dist / (2 * jump.time) * GAME.FIXED_DT()
+        dash_speed = dash.dist / dash.time * GAME.FIXED_DT()
 
-        self.__PHYSICS: physics = physics(speed, jump_force, gravity, dash_dist, dash_speed)
+        self.__PHYSICS: physics = physics(speed, jump_force, gravity, dash.dist, dash_speed)
         self.__TILEMAP: Tilemap = tilemap
 
     def update(self) -> None:
@@ -173,7 +173,7 @@ class MovingCollectable(Collectable):
     def __init__(self, sprite_path: str | None, size: Vector2, pos: Vector2, diff: character_diff, speed: float, destination: Vector2, character: type[Character]) -> None:
         from Game import GAME
         super().__init__(sprite_path, size, pos, diff, character)
-        self.__SPEED: float = speed * GAME.fixed_dt()
+        self.__SPEED: float = speed * GAME.FIXED_DT()
         self.__START: Vector2 = self.pos.copy()
         self.__DESTINATION: Vector2 = destination
         self.__DIR: Vector2 = (self.__DESTINATION - self.__START).normalize()

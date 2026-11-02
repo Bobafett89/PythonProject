@@ -1,6 +1,7 @@
 import pygame
 from pygame import Vector2
-from Utils import character_diff, Control, Command, clamp, vector2_div, vector2_mult
+from Utils import clamp, vector2_div, vector2_mult
+from BasicObjects import Control, Command, character_diff, jump_params, dash_params
 from math import floor
 from os import path
 from json import loads, decoder
@@ -26,8 +27,8 @@ class GAME:
         return cls.__FRAME.dt
 
     @classmethod
-    def fixed_dt(cls) -> float:
-        return cls.__FRAME.fixed_dt
+    def FIXED_DT(cls) -> float:
+        return cls.__FRAME.FIXED_DT
 
     @classmethod
     def fixed_steps(cls) -> int:
@@ -41,7 +42,7 @@ class GAME:
         cls.__control: Control = Control.wait()
 
     @classmethod
-    def start(cls, start_menu: UIScreen) -> None:
+    def start(cls, start_menu: UI_Screen) -> None:
         cls.__UI.set_start_menu(start_menu)
         cls.__open_main_menu()
         cls.__active = True
@@ -167,24 +168,8 @@ class UI:
             self.__current_screen.press_buttons()
 
 class Frame:
-    _FIXED_DT: float = 1 / 50
-    _MAX_DT: float = 1 / 30
-
-    @property
-    def dt(self) -> float:
-        return self.__dt
-
-    @property
-    def fixed_dt(self) -> float:
-        return self._FIXED_DT
-
-    @property
-    def fixed_steps(self) -> int:
-        return self.__fixed_steps
-
-    @property
-    def screen_size(self) -> Vector2:
-        return Vector2(self.__SCREEN.get_size())
+    __FIXED_DT: float = 1 / 50
+    __MAX_DT: float = 1 / 30
 
     def __init__(self) -> None:
         screen_flags = pygame.FULLSCREEN | pygame.SCALED
@@ -195,11 +180,27 @@ class Frame:
         self.__acc_dt: float = 0
         self.__fixed_steps: int = 0
 
+    @property
+    def dt(self) -> float:
+        return self.__dt
+
+    @property
+    def FIXED_DT(self) -> float:
+        return Frame.__FIXED_DT
+
+    @property
+    def fixed_steps(self) -> int:
+        return self.__fixed_steps
+
+    @property
+    def screen_size(self) -> Vector2:
+        return Vector2(self.__SCREEN.get_size())
+
     def next(self) -> None:
-        self.__dt = clamp(self.__CLOCK.tick(1000) / 1000, 0, Frame._MAX_DT)
+        self.__dt = clamp(self.__CLOCK.tick(1000) / 1000, 0, Frame.__MAX_DT)
         self.__acc_dt += self.__dt
-        self.__fixed_steps = floor(self.__acc_dt / self._FIXED_DT)
-        self.__acc_dt -= Frame._FIXED_DT * self.__fixed_steps
+        self.__fixed_steps = floor(self.__acc_dt / Frame.__FIXED_DT)
+        self.__acc_dt -= Frame.__FIXED_DT * self.__fixed_steps
 
     def render(self) -> None:
         self.__SCREEN.fill("#333333")
@@ -219,8 +220,8 @@ class Frame:
         self.__RENDER_GROUPS.clear()
 
 class Level:
-    _DEF_LEVEL_SIZE: Vector2 = Vector2(16, 9)
-    _DEF_TILEMAP_LAYERS: list[str] = ["ground", "hazard"]
+    __DEF_LEVEL_SIZE: Vector2 = Vector2(16, 9)
+    __DEF_TILEMAP_LAYERS: list[str] = ["ground", "hazard"]
 
     def __init__(self, generator: Callable[[Level], None], tilemap_size: Vector2) -> None:
         from Objects import Tilemap, Character
@@ -314,7 +315,7 @@ class Level:
             return valid_tilemap
 
         def generator(level: Level) -> None:
-            level_size: Vector2 = cls._DEF_LEVEL_SIZE * level_struct["size_factor"]
+            level_size: Vector2 = cls.__DEF_LEVEL_SIZE * level_struct["size_factor"]
 
             def point_to_vector(point: list[float | int]):
                 return Vector2(point[0], point[1])
@@ -350,7 +351,9 @@ class Level:
 
             char_pos = to_screen_vector(point_to_vector(char["pos"]))
             char_size = to_screen_vector(point_to_vector(char["size"]))
-            level.add_character(char["spr"], char_size, char_pos, jump["dist"] / level_size.x, jump["height"] / level_size.y, jump["time"], dash["dist"] / level_size.x, dash["time"])
+            jump = jump_params(jump["dist"] / level_size.x, jump["height"] / level_size.y, jump["time"])
+            dash = dash_params(dash["dist"] / level_size.x, dash["time"])
+            level.add_character(char["spr"], char_size, char_pos, jump, dash)
 
             for finish in finishes:
                 for pos in finish["pos"]:
@@ -445,7 +448,7 @@ class Level:
         return generator
 
     def __build_level(self) -> None:
-        for name in Level._DEF_TILEMAP_LAYERS:
+        for name in Level.__DEF_TILEMAP_LAYERS:
             self.__TILEMAP.add_layer(name)
         self.__GENERATOR(self)
 
@@ -464,11 +467,11 @@ class Level:
     def add_hazard_tile(self, sprite_path: str, tile_pos: Vector2) -> None:
         self.__TILEMAP.add_tile(sprite_path, "hazard", tile_pos)
 
-    def add_character(self, sprite_path: str, size: Vector2, pos: Vector2, jump_dist: float, jump_height: float, jump_time: float, dash_dist: float, dash_time: float) -> None:
+    def add_character(self, sprite_path: str, size: Vector2, pos: Vector2, jump: jump_params, dash: dash_params) -> None:
         from Objects import Character
         if (self.__PLAYER != None):
             raise RuntimeError("More than one character can't be spawned")
-        self.__PLAYER = Character(sprite_path, size, pos, jump_dist, jump_height, jump_time, dash_dist, dash_time, self.__TILEMAP)
+        self.__PLAYER = Character(sprite_path, size, pos, jump, dash, self.__TILEMAP)
         self.__OBJECTS.append(self.__PLAYER)
         self.__SPRITES.add(self.__PLAYER)
 

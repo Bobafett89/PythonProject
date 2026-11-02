@@ -1,6 +1,7 @@
 import pygame
 from pygame import Vector2
-from Utils import Control, vector2_div, vector2_mult
+from Utils import vector2_div, vector2_mult
+from BasicObjects import Control
 from Game import GAME
 from UI import UI_Screen
 from os import listdir

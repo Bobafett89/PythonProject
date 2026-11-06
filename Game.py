@@ -1,7 +1,7 @@
 import pygame
 from pygame import Vector2
 from Utils import clamp, vector2_div, vector2_mult
-from BasicObjects import Control, Command, character_diff, jump_params, dash_params
+from BasicObjects import Control, Command, character_diff, jump_params, dash_params, Transform
 from math import floor
 from os import path
 from json import loads, decoder
@@ -353,13 +353,13 @@ class Level:
             char_size = to_screen_vector(point_to_vector(char["size"]))
             jump = jump_params(jump["dist"] / level_size.x, jump["height"] / level_size.y, jump["time"])
             dash = dash_params(dash["dist"] / level_size.x, dash["time"])
-            level.add_character(char["spr"], char_size, char_pos, jump, dash)
+            level.add_character(char["spr"], Transform(char_size, char_pos), jump, dash)
 
             for finish in finishes:
                 for pos in finish["pos"]:
                     finish_pos = to_screen_vector(point_to_vector(pos))
                     finish_size = to_screen_vector(point_to_vector(finish["size"]))
-                    level.add_finish(finish["spr"], finish_size, finish_pos)
+                    level.add_finish(finish["spr"], Transform(finish_size, finish_pos))
 
             build_tilemap(ground, level.add_ground_tile)
 
@@ -370,7 +370,7 @@ class Level:
                     item_size = to_screen_vector(point_to_vector(item["size"]))
                     item_pos = to_screen_vector(point_to_vector(pos))
                     item_diff = character_diff(item["diff"][0], item["diff"][1], item["diff"][2], item["diff"][3])
-                    level.add_static_item(item["spr"], item_size, item_pos, item_diff)
+                    level.add_static_item(item["spr"], Transform(item_size, item_pos), item_diff)
 
             for item in moving_items:
                 for i in range(len(item["pos"])):
@@ -379,7 +379,7 @@ class Level:
                     item_dest = to_screen_vector(point_to_vector(item["dest"][i]))
                     item_speed = (item_dest - item_pos).length() / item["time"]
                     item_diff = character_diff(item["diff"][0], item["diff"][1], item["diff"][2], item["diff"][3])
-                    level.add_moving_item(item["spr"], item_size, item_pos, item_diff, item_speed, item_dest)
+                    level.add_moving_item(item["spr"], Transform(item_size, item_pos), item_diff, item_speed, item_dest)
 
         valid_size_factor = has_keys("size_factor", level_struct, int)
 
@@ -467,30 +467,30 @@ class Level:
     def add_hazard_tile(self, sprite_path: str, tile_pos: Vector2) -> None:
         self.__TILEMAP.add_tile(sprite_path, "hazard", tile_pos)
 
-    def add_character(self, sprite_path: str, size: Vector2, pos: Vector2, jump: jump_params, dash: dash_params) -> None:
+    def add_character(self, sprite_path: str, transform: Transform, jump: jump_params, dash: dash_params) -> None:
         from Objects import Character
         if (self.__PLAYER != None):
             raise RuntimeError("More than one character can't be spawned")
-        self.__PLAYER = Character(sprite_path, size, pos, jump, dash, self.__TILEMAP)
+        self.__PLAYER = Character(sprite_path, transform, jump, dash, self.__TILEMAP)
         self.__OBJECTS.append(self.__PLAYER)
         self.__SPRITES.add(self.__PLAYER)
 
-    def add_finish(self, sprite_path: str, size: Vector2, pos: Vector2) -> None:
+    def add_finish(self, sprite_path: str, transform: Transform) -> None:
         from Objects import Finish
-        finish = Finish(sprite_path, size, pos, self.__PLAYER)
+        finish = Finish(sprite_path, transform, self.__PLAYER)
         self.__OBJECTS.append(finish)
         self.__SPRITES.add(finish)
 
-    def add_static_item(self, sprite_path: str, size: Vector2, pos: Vector2, diff: character_diff) -> None:
+    def add_static_item(self, sprite_path: str, transform: Transform, diff: character_diff) -> None:
         from Objects import Collectable
-        collectable = Collectable(sprite_path, size, pos, diff, self.__PLAYER)
+        collectable = Collectable(sprite_path, transform, diff, self.__PLAYER)
         self.__OBJECTS.append(collectable)
         self.__COLLECTABLES.append(collectable)
         self.__SPRITES.add(collectable)
 
-    def add_moving_item(self, sprite_path: str, size: Vector2, pos: Vector2, diff: character_diff, speed: float, destination: Vector2) -> None:
+    def add_moving_item(self, sprite_path: str, transform: Transform, diff: character_diff, speed: float, destination: Vector2) -> None:
         from Objects import MovingCollectable
-        collectable = MovingCollectable(sprite_path, size, pos, diff, speed, destination, self.__PLAYER)
+        collectable = MovingCollectable(sprite_path, transform, diff, speed, destination, self.__PLAYER)
         self.__OBJECTS.append(collectable)
         self.__COLLECTABLES.append(collectable)
         self.__SPRITES.add(collectable)

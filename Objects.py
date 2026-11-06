@@ -1,16 +1,16 @@
 import pygame
 from pygame import Vector2
-from BasicObjects import BasicSprite, character_diff, Control, jump_params, dash_params
+from BasicObjects import BasicSprite, character_diff, Control, jump_params, dash_params, Transform
 from BasicObjects import character_physics_controller as physics
 from Utils import in_right_interval, direction, trunc_vector2, vector2_div, vector2_mult
 from math import ceil
 
 class Character(BasicSprite):
-    def __init__(self, sprite_path: str, size: Vector2, pos: Vector2, jump: jump_params, dash: dash_params, tilemap: Tilemap) -> None:
-        super().__init__(sprite_path, size, pos)
+    def __init__(self, sprite_path: str, transform: Transform, jump: jump_params, dash: dash_params, tilemap: Tilemap) -> None:
+        super().__init__(sprite_path, transform)
         from Game import GAME
         jump_force = 2 * jump.height / jump.time * GAME.FIXED_DT()
-        gravity = (2 * jump.height / jump.time) / jump.time * (GAME.FIXED_DT() ** 2)
+        gravity = jump_force / jump.time * GAME.FIXED_DT()
         speed = jump.dist / (2 * jump.time) * GAME.FIXED_DT()
         dash_speed = dash.dist / dash.time * GAME.FIXED_DT()
 
@@ -68,7 +68,6 @@ class Character(BasicSprite):
 class Tilemap:
     def __init__(self, size: Vector2) -> None:
         self.__SIZE: Vector2 = size
-        self.__TILESIZE: Vector2 = vector2_div(Vector2(1, 1), self.__SIZE)
         self.__SPRITES: pygame.sprite.Group = pygame.sprite.Group()
         self.__LAYERS: dict[TilemapLayer] = dict()
 
@@ -115,7 +114,7 @@ class TilemapLayer:
     def add_tile(self, sprite_path: str, tile_pos: Vector2) -> None:
         if (self.__MAP[int(tile_pos.x)][int(tile_pos.y)] == None):
             pos = self.__convert_to_screen(tile_pos + Vector2(0.5, 0.5))
-            tile = BasicSprite(sprite_path, self.__TILESIZE, pos)
+            tile = BasicSprite(sprite_path, Transform(self.__TILESIZE, pos))
             self.__SPRITES.add(tile)
             self.__MAP[int(tile_pos.x)][int(tile_pos.y)] = tile
 
@@ -125,7 +124,7 @@ class TilemapLayer:
         else:
             if (pseudo_tile):
                 pos = self.__convert_to_screen(tile_pos + Vector2(0.5, 0.5))
-                return BasicSprite(None, self.__TILESIZE, pos)
+                return BasicSprite(None, Transform(self.__TILESIZE, pos))
             else:
                 return None
 
@@ -143,8 +142,8 @@ class TilemapLayer:
         return collisions
 
 class Finish(BasicSprite):
-    def __init__(self, sprite_path: str | None, size: Vector2, pos: Vector2, character: type[BasicSprite]) -> None:
-        super().__init__(sprite_path, size, pos)
+    def __init__(self, sprite_path: str | None, transform: Transform, character: type[BasicSprite]) -> None:
+        super().__init__(sprite_path, transform)
         self.__CHAR: type[BasicSprite] = character
 
     def fixed_update(self) -> None:
@@ -153,8 +152,8 @@ class Finish(BasicSprite):
             GAME.set_command(Control.close_level())
 
 class Collectable(BasicSprite):
-    def __init__(self, sprite_path: str | None, size: Vector2, pos: Vector2, diff: character_diff, character: type[Character]) -> None:
-        super().__init__(sprite_path, size, pos)
+    def __init__(self, sprite_path: str | None, transform: Transform, diff: character_diff, character: type[Character]) -> None:
+        super().__init__(sprite_path, transform)
         self.__DIFF: character_diff = diff
         self.__is_collected: bool = False
         self.__CHAR: type[Character] = character
@@ -170,9 +169,9 @@ class Collectable(BasicSprite):
             self.__is_collected = True
 
 class MovingCollectable(Collectable):
-    def __init__(self, sprite_path: str | None, size: Vector2, pos: Vector2, diff: character_diff, speed: float, destination: Vector2, character: type[Character]) -> None:
+    def __init__(self, sprite_path: str | None, transform: Transform, diff: character_diff, speed: float, destination: Vector2, character: type[Character]) -> None:
         from Game import GAME
-        super().__init__(sprite_path, size, pos, diff, character)
+        super().__init__(sprite_path, transform, diff, character)
         self.__SPEED: float = speed * GAME.FIXED_DT()
         self.__START: Vector2 = self.pos.copy()
         self.__DESTINATION: Vector2 = destination

@@ -7,19 +7,18 @@ from dataclasses import dataclass
 from os import path
 
 class BasicSprite(pygame.sprite.Sprite):
-    def __init__(self, sprite_path: str | None, size: Vector2, pos: Vector2) -> None:
+    def __init__(self, sprite_path: str | None, transform: Transform) -> None:
         super().__init__()
-        self.__size: Vector2 = size
-        self.__pos: Vector2 = pos
+        self.__transform: Transform = transform
         self._load_image(sprite_path)
 
     @property
     def size(self) -> Vector2:
-        return self.__size
+        return self.__transform.size
 
     @property
     def pos(self) -> Vector2:
-        return self.__pos
+        return self.__transform.pos
 
     @property
     def edge_offset(self) -> Vector2:
@@ -39,7 +38,7 @@ class BasicSprite(pygame.sprite.Sprite):
         self.rect = self.rect.move_to(center=pos)
 
     def _move_to(self, new_pos: Vector2) -> None:
-        self.__pos = new_pos
+        self.__transform.pos = new_pos
         self.__set_center()
 
     def _move_by(self, offset: Vector2) -> None:
@@ -53,7 +52,7 @@ class BasicSprite(pygame.sprite.Sprite):
         self.__set_center()
 
     def _set_size(self, new_size: Vector2) -> None:
-        self.__size = new_size
+        self.__transform.size = new_size
         self.__rescale()
 
     def _set_image(self, image: pygame.Surface) -> None:
@@ -127,6 +126,11 @@ class Control:
         return Control(Command.CLOSE_GAME, None)
 
 @dataclass
+class Transform:
+    size: Vector2
+    pos: Vector2
+
+@dataclass
 class jump_struct:
     on_ground: bool = False
     force: int = 5
@@ -193,7 +197,7 @@ class character_physics_controller:
             self.__DASH.destination = None
 
         def next_state() -> BasicSprite:
-            return BasicSprite(None, obj.size, obj.pos + self.__VELOCITY)
+            return BasicSprite(None, Transform(obj.size, obj.pos + self.__VELOCITY))
 
         if (self.__VELOCITY.y != 0):
             self.__JUMP.on_ground = False

@@ -1,6 +1,6 @@
 import pygame
 from pygame import Vector2
-from BasicObjects import BasicSprite
+from BasicObjects import BasicSprite, Transform
 from Utils import in_interval, vector2_div, vector2_mult, round_vector2
 from collections.abc import Callable
 
@@ -13,12 +13,12 @@ class UI_Screen:
     def SPRITES(self) -> pygame.sprite.Group:
         return self.__SPRITES
 
-    def add_text(self, text: str, size: Vector2, pos: Vector2) -> None:
-        new_text: Text = Text(text, size, pos)
+    def add_text(self, text: str, transform: Transform) -> None:
+        new_text: Text = Text(text, transform)
         self.__SPRITES.add(new_text)
 
-    def add_button(self, sprite_path: str, size: Vector2, pos: Vector2, callback: Callable[[], None]) -> None:
-        new_button: Button = Button(sprite_path, size, pos, callback)
+    def add_button(self, sprite_path: str, transform: Transform, callback: Callable[[], None]) -> None:
+        new_button: Button = Button(sprite_path, transform, callback)
         self.__SPRITES.add(new_button)
         self.__BUTTONS.append(new_button)
 
@@ -29,12 +29,12 @@ class UI_Screen:
                 break
 
 class Text(BasicSprite):
-    def __init__(self, text: str, max_size: Vector2, pos: Vector2) -> None:
+    def __init__(self, text: str, transform: Transform) -> None:
         from Game import GAME
-        super().__init__(None, max_size, pos)
-        font: pygame.font.Font = pygame.font.Font(size = self.__get_max_point_size(text, max_size))
+        super().__init__(None, transform)
+        font: pygame.font.Font = pygame.font.Font(size = self.__get_max_point_size(text, transform.size))
         font.align = pygame.FONT_CENTER
-        img: pygame.Surface = font.render(text, True, "white", wraplength = round(max_size.x * GAME.screen_size().x))
+        img: pygame.Surface = font.render(text, True, "white", wraplength = round(transform.size.x * GAME.screen_size().x))
         text_size: Vector2 = vector2_div(Vector2(img.size), GAME.screen_size())
         self._set_size(text_size)
         self._set_image(img)
@@ -57,8 +57,8 @@ class Text(BasicSprite):
         return point_size
 
 class Button(BasicSprite):
-    def __init__(self, sprite_path: str, size: Vector2, pos: Vector2, callback: Callable[[], None]) -> None:
-        super().__init__(sprite_path, size, pos)
+    def __init__(self, sprite_path: str, transform: Transform, callback: Callable[[], None]) -> None:
+        super().__init__(sprite_path, transform)
         self.__CALLBACK: Callable[[], None] = callback
 
     def update(self) -> bool:

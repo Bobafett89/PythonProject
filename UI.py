@@ -1,7 +1,7 @@
 import pygame
 from pygame import Vector2
 from BasicObjects import BasicSprite, Transform
-from Utils import in_interval, vector2_div, vector2_mult, round_vector2
+from Utils import in_rect, vector2_div, vector2_mult, round_vector2, Interval
 from collections.abc import Callable
 
 class UI_Screen:
@@ -66,7 +66,7 @@ class Button(BasicSprite):
         pressed: bool = False
         cursor_pos: Vector2 = vector2_div(Vector2(pygame.mouse.get_pos()), GAME.screen_size())
         new_keys: list[bool] = pygame.mouse.get_just_pressed()
-        if (new_keys[0] and in_interval(cursor_pos.x, self.topleft.x, self.botright.x) and in_interval(cursor_pos.y, self.topleft.y, self.botright.y)):
+        if (new_keys[0] and in_rect(cursor_pos, self.topleft, self.botright, Interval.CLOSED)):
             self.__CALLBACK()
             pressed = True
         return pressed

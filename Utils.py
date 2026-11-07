@@ -1,4 +1,11 @@
 from pygame import Vector2
+from enum import Enum, auto
+
+class Interval(Enum):
+    CLOSED = auto()
+    LEFTOPEN = auto()
+    RIGHTOPEN = auto()
+    OPEN = auto()
 
 def clamp(value: float, min_val: float, max_val: float):
     return min(max_val, max(min_val, value))
@@ -6,17 +13,23 @@ def clamp(value: float, min_val: float, max_val: float):
 def direction(statement: bool) -> int:
     return 2 * statement - 1
 
-def in_interval(value: float, min: float, max: float) -> bool:
-    return min <= value and value <= max
+def in_interval(value: float, min: float, max: float, interval: Interval) -> bool:
+    result: bool = None
+    match (interval):
+        case Interval.CLOSED:
+            result = min <= value and value <= max
+        case Interval.LEFTOPEN:
+            result = min < value and value <= max
+        case Interval.RIGHTOPEN:
+            result = min <= value and value < max
+        case Interval.OPEN:
+            result = min < value and value < max
+    return result
 
-def in_left_interval(value: float, min: float, max: float) -> bool:
-    return min < value and value <= max
-
-def in_right_interval(value: float, min: float, max: float) -> bool:
-    return min <= value and value < max
-
-def in_open_interval(value: float, min: float, max: float) -> bool:
-    return min < value and value < max
+def in_rect(value: Vector2, topleft: Vector2, botright: Vector2, interval: Interval) -> bool:
+    result_x: bool = in_interval(value.x, topleft.x, botright.x, interval)
+    result_y: bool = in_interval(value.y, topleft.y, botright.y, interval)
+    return result_x and result_y
 
 def vector2_div(dividend_vector: Vector2, divisor_vector: Vector2) -> Vector2:
     return Vector2(dividend_vector.x / divisor_vector.x, dividend_vector.y / divisor_vector.y)

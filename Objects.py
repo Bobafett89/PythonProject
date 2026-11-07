@@ -2,7 +2,7 @@ import pygame
 from pygame import Vector2
 from BasicObjects import BasicSprite, character_diff, Control, jump_params, dash_params, Transform
 from BasicObjects import character_physics_controller as physics
-from Utils import in_right_interval, direction, trunc_vector2, vector2_div, vector2_mult
+from Utils import in_rect, direction, trunc_vector2, vector2_div, vector2_mult, Interval
 from math import ceil
 
 class Character(BasicSprite):
@@ -119,7 +119,7 @@ class TilemapLayer:
             self.__MAP[int(tile_pos.x)][int(tile_pos.y)] = tile
 
     def get_tile(self, tile_pos: Vector2, pseudo_tile: bool) -> BasicSprite | None:
-        if (in_right_interval(tile_pos.x, 0, self.__SIZE.x) and in_right_interval(tile_pos.y, 0, self.__SIZE.y)):
+        if (in_rect(tile_pos, Vector2(0, 0), self.__SIZE, Interval.RIGHTOPEN)):
             return self.__MAP[int(tile_pos.x)][int(tile_pos.y)]
         else:
             if (pseudo_tile):

@@ -1,7 +1,7 @@
 {
     "size_factor": 1,
     "tilemap_size": [32, 18],
-    "char": {
+    "player": {
         "spr": "Char.png",
         "size": [0.4, 0.8],
         "pos": [3.5, 6.5],

@@ -1,12 +1,12 @@
 import pygame
 from pygame import Vector2
-from BasicObjects import BasicSprite, character_diff, Control, jump_params, dash_params, Transform
-from BasicObjects import character_physics_controller as physics
+from BasicObjects import BasicSprite, Player_diff, Control, Jump_params, Dash_params, Transform
+from BasicObjects import PhysicsSystem as physics
 from Utils import in_rect, direction, trunc_vector2, vector2_div, vector2_mult, Interval
 from math import ceil
 
-class Character(BasicSprite):
-    def __init__(self, sprite_path: str, transform: Transform, jump: jump_params, dash: dash_params, tilemap: Tilemap) -> None:
+class Player(BasicSprite):
+    def __init__(self, sprite_path: str, transform: Transform, jump: Jump_params, dash: Dash_params, tilemap: Tilemap) -> None:
         super().__init__(sprite_path, transform)
         from Game import GAME
         jump_force: float = 2 * jump.height / jump.time * GAME.FIXED_DT()
@@ -59,13 +59,13 @@ class Character(BasicSprite):
         keys: list[bool] = pygame.key.get_pressed()
         new_keys: list[bool] = pygame.key.get_just_pressed()
         if (keys[pygame.K_UP]):
-            self.__PHYSICS._character_physics_controller__VELOCITY.y = -self.__PHYSICS._character_physics_controller__JUMP.force
+            self.__PHYSICS._PhysicsSystem__VELOCITY.y = -self.__PHYSICS._PhysicsSystem__JUMP.force
         if (keys[pygame.K_DOWN]):
-            self.__PHYSICS._character_physics_controller__VELOCITY.y = self.__PHYSICS._character_physics_controller__JUMP.force
+            self.__PHYSICS._PhysicsSystem__VELOCITY.y = self.__PHYSICS._PhysicsSystem__JUMP.force
         if (new_keys[pygame.K_1]):
-            self.__PHYSICS._character_physics_controller__JUMP.def_air_jumps += 1
+            self.__PHYSICS._PhysicsSystem__JUMP.def_air_jumps += 1
         if (new_keys[pygame.K_2]):
-            self.__PHYSICS._character_physics_controller__DASH.def_count += 1
+            self.__PHYSICS._PhysicsSystem__DASH.def_count += 1
 
 class Tilemap:
     def __init__(self, size: Vector2) -> None:
@@ -144,36 +144,36 @@ class TilemapLayer:
         return collisions
 
 class Finish(BasicSprite):
-    def __init__(self, sprite_path: str | None, transform: Transform, character: type[BasicSprite]) -> None:
+    def __init__(self, sprite_path: str | None, transform: Transform, player: type[BasicSprite]) -> None:
         super().__init__(sprite_path, transform)
-        self.__CHAR: type[BasicSprite] = character
+        self.__PLAYER: type[BasicSprite] = player
 
     def fixed_update(self) -> None:
         from Game import GAME
-        if (self.overlap(self.__CHAR)):
+        if (self.overlap(self.__PLAYER)):
             GAME.set_command(Control.close_level())
 
 class Collectable(BasicSprite):
-    def __init__(self, sprite_path: str | None, transform: Transform, diff: character_diff, character: type[Character]) -> None:
+    def __init__(self, sprite_path: str | None, transform: Transform, diff: Player_diff, player: type[Player]) -> None:
         super().__init__(sprite_path, transform)
-        self.__DIFF: character_diff = diff
+        self.__DIFF: Player_diff = diff
         self.__is_collected: bool = False
-        self.__CHAR: type[Character] = character
+        self.__PLAYER: type[Player] = player
 
     @property
     def is_collected(self) -> bool:
         return self.__is_collected
 
     def fixed_update(self) -> None:
-        collide_with_character: bool = self.overlap(self.__CHAR)
-        if (collide_with_character and not self.is_collected):
-            self.__CHAR.apply_diff(self.__DIFF)
+        collide_with_player: bool = self.overlap(self.__PLAYER)
+        if (collide_with_player and not self.is_collected):
+            self.__PLAYER.apply_diff(self.__DIFF)
             self.__is_collected = True
 
 class MovingCollectable(Collectable):
-    def __init__(self, sprite_path: str | None, transform: Transform, diff: character_diff, speed: float, destination: Vector2, character: type[Character]) -> None:
+    def __init__(self, sprite_path: str | None, transform: Transform, diff: Player_diff, speed: float, destination: Vector2, player: type[Player]) -> None:
         from Game import GAME
-        super().__init__(sprite_path, transform, diff, character)
+        super().__init__(sprite_path, transform, diff, player)
         self.__SPEED: float = speed * GAME.FIXED_DT()
         self.__START: Vector2 = self.pos.copy()
         self.__DESTINATION: Vector2 = destination

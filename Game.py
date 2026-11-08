@@ -1,7 +1,7 @@
 import pygame
 from pygame import Vector2
 from Utils import clamp, vector2_div, vector2_mult
-from BasicObjects import Control, Command, character_diff, jump_params, dash_params, Transform
+from BasicObjects import Control, Command, Player_diff, Jump_params, Dash_params, Transform
 from math import floor
 from os import path
 from json import loads, decoder
@@ -225,13 +225,13 @@ class Level:
     __DEF_TILEMAP_LAYERS: list[str] = ["ground", "hazard"]
 
     def __init__(self, generator: Callable[[Level], None], tilemap_size: Vector2) -> None:
-        from Objects import Tilemap, Character
+        from Objects import Tilemap, Player
         self.__SPRITES: pygame.sprite.Group = pygame.sprite.Group()
         self.__GENERATOR: Callable[[Level], None] = generator
         self.__TILEMAP: Tilemap = Tilemap(tilemap_size)
         self.__OBJECTS: list[type[BasicSprite]] = []
         self.__COLLECTABLES: list[type[Collectable]] = []
-        self.__PLAYER: Character = None
+        self.__PLAYER: Player = None
         self.__build_level()
 
     @property
@@ -341,20 +341,20 @@ class Level:
             def to_screen_vector(level_vector: Vector2) -> Vector2:
                 return vector2_div(level_vector, level_size)
 
-            char: dict[str, Any] = level_struct["char"]
-            jump: dict[str, Any] = char["jump"]
-            dash: dict[str, Any] = char["dash"]
+            player: dict[str, Any] = level_struct["player"]
+            jump: dict[str, Any] = player["jump"]
+            dash: dict[str, Any] = player["dash"]
             ground: dict[str, Any] = level_struct["tiles"]["grnd"]
             hazard: dict[str, Any] = level_struct["tiles"]["hzrd"]
             finishes: dict[str, Any] = level_struct["finishes"]
             static_items: dict[str, Any] = level_struct["items"]["stc"]
             moving_items: dict[str, Any] = level_struct["items"]["mov"]
 
-            char_pos: Vector2 = to_screen_vector(point_to_vector(char["pos"]))
-            char_size: Vector2 = to_screen_vector(point_to_vector(char["size"]))
-            jump: jump_params = jump_params(jump["dist"] / level_size.x, jump["height"] / level_size.y, jump["time"])
-            dash: dash_params = dash_params(dash["dist"] / level_size.x, dash["time"])
-            level.add_character(char["spr"], Transform(char_size, char_pos), jump, dash)
+            player_pos: Vector2 = to_screen_vector(point_to_vector(player["pos"]))
+            player_size: Vector2 = to_screen_vector(point_to_vector(player["size"]))
+            jump: Jump_params = Jump_params(jump["dist"] / level_size.x, jump["height"] / level_size.y, jump["time"])
+            dash: Dash_params = Dash_params(dash["dist"] / level_size.x, dash["time"])
+            level.add_player(player["spr"], Transform(player_size, player_pos), jump, dash)
 
             for finish in finishes:
                 for pos in finish["pos"]:
@@ -370,7 +370,7 @@ class Level:
                 for pos in item["pos"]:
                     item_size: Vector2 = to_screen_vector(point_to_vector(item["size"]))
                     item_pos: Vecttor2 = to_screen_vector(point_to_vector(pos))
-                    item_diff: character_diff = character_diff(item["diff"][0], item["diff"][1], item["diff"][2], item["diff"][3])
+                    item_diff: Player_diff = Player_diff(item["diff"][0], item["diff"][1], item["diff"][2], item["diff"][3])
                     level.add_static_item(item["spr"], Transform(item_size, item_pos), item_diff)
 
             for item in moving_items:
@@ -379,22 +379,22 @@ class Level:
                     item_pos: Vector2 = to_screen_vector(point_to_vector(item["pos"][i]))
                     item_dest: Vector2 = to_screen_vector(point_to_vector(item["dest"][i]))
                     item_speed: float = (item_dest - item_pos).length() / item["time"]
-                    item_diff: character_diff = character_diff(item["diff"][0], item["diff"][1], item["diff"][2], item["diff"][3])
+                    item_diff: Player_diff = Player_diff(item["diff"][0], item["diff"][1], item["diff"][2], item["diff"][3])
                     level.add_moving_item(item["spr"], Transform(item_size, item_pos), item_diff, item_speed, item_dest)
 
         valid_size_factor: bool = has_keys("size_factor", level_struct, int)
 
         valid_tiles: bool = has_keys("tilemap_size", level_struct, list) and validate_point(level_struct["tilemap_size"], True)
 
-        valid_char: bool = has_keys("char", level_struct, dict)
-        if (valid_char):
-            char: dict[str, Any] = level_struct["char"]
-            valid_sprite: bool = has_sprite(char)
-            valid_size: bool = has_valid_size(char)
-            valid_pos: bool = has_valid_pos(char)
-            valid_jump: bool = has_keys("jump", char, dict) and has_keys(["height", "dist", "time", "temp", "def"], char["jump"], (int, float))
-            valid_dash: bool = has_keys("dash", char, dict) and has_keys(["dist", "time", "temp", "def"], char["dash"], (int, float))
-            valid_char: bool = valid_sprite and valid_size and valid_pos and valid_jump and valid_dash
+        valid_player: bool = has_keys("player", level_struct, dict)
+        if (valid_player):
+            player: dict[str, Any] = level_struct["player"]
+            valid_sprite: bool = has_sprite(player)
+            valid_size: bool = has_valid_size(player)
+            valid_pos: bool = has_valid_pos(player)
+            valid_jump: bool = has_keys("jump", player, dict) and has_keys(["height", "dist", "time", "temp", "def"], player["jump"], (int, float))
+            valid_dash: bool = has_keys("dash", player, dict) and has_keys(["dist", "time", "temp", "def"], player["dash"], (int, float))
+            valid_player: bool = valid_sprite and valid_size and valid_pos and valid_jump and valid_dash
 
         tiles: dict[str, Any] = dict()
         if (has_keys("tiles", level_struct, dict)):
@@ -443,7 +443,7 @@ class Level:
 
         valid_tilemaps: bool = valid_tiles and valid_ground and valid_hazard
         valid_items: bool = valid_static_items and valid_moving_items
-        if (not (valid_size_factor and valid_char and valid_tilemaps and valid_finishes and valid_items)):
+        if (not (valid_size_factor and valid_player and valid_tilemaps and valid_finishes and valid_items)):
             raise RuntimeError("Not valid structure of a level")
 
         return generator
@@ -468,11 +468,11 @@ class Level:
     def add_hazard_tile(self, sprite_path: str, tile_pos: Vector2) -> None:
         self.__TILEMAP.add_tile(sprite_path, "hazard", tile_pos)
 
-    def add_character(self, sprite_path: str, transform: Transform, jump: jump_params, dash: dash_params) -> None:
-        from Objects import Character
+    def add_player(self, sprite_path: str, transform: Transform, jump: Jump_params, dash: Dash_params) -> None:
+        from Objects import Player
         if (self.__PLAYER != None):
-            raise RuntimeError("More than one character can't be spawned")
-        self.__PLAYER = Character(sprite_path, transform, jump, dash, self.__TILEMAP)
+            raise RuntimeError("More than one player can't be spawned")
+        self.__PLAYER = Player(sprite_path, transform, jump, dash, self.__TILEMAP)
         self.__OBJECTS.append(self.__PLAYER)
         self.__SPRITES.add(self.__PLAYER)
 
@@ -482,14 +482,14 @@ class Level:
         self.__OBJECTS.append(finish)
         self.__SPRITES.add(finish)
 
-    def add_static_item(self, sprite_path: str, transform: Transform, diff: character_diff) -> None:
+    def add_static_item(self, sprite_path: str, transform: Transform, diff: Player_diff) -> None:
         from Objects import Collectable
         collectable: Collectable = Collectable(sprite_path, transform, diff, self.__PLAYER)
         self.__OBJECTS.append(collectable)
         self.__COLLECTABLES.append(collectable)
         self.__SPRITES.add(collectable)
 
-    def add_moving_item(self, sprite_path: str, transform: Transform, diff: character_diff, speed: float, destination: Vector2) -> None:
+    def add_moving_item(self, sprite_path: str, transform: Transform, diff: Player_diff, speed: float, destination: Vector2) -> None:
         from Objects import MovingCollectable
         collectable: Collectable = MovingCollectable(sprite_path, transform, diff, speed, destination, self.__PLAYER)
         self.__OBJECTS.append(collectable)

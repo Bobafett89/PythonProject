@@ -131,14 +131,14 @@ class Transform:
     pos: Vector2
 
 @dataclass
-class jump_struct:
+class Jump_info:
     on_ground: bool = False
     force: int = 5
     air_jumps: int = 0
     def_air_jumps: int = 0
 
 @dataclass
-class dash_struct:
+class Dash_info:
     is_active: bool = False
     speed: float = 3
     distance: float = 3
@@ -147,29 +147,29 @@ class dash_struct:
     def_count: int = 0
 
 @dataclass
-class character_diff:
+class Player_diff:
     air_jumps: int = 0
     def_air_jumps: int = 0
     dashes: int = 0
     def_dashes: int = 0
 
 @dataclass
-class jump_params:
+class Jump_params:
     dist: float = 1
     height: float = 1
     time: float = 1
 
 @dataclass
-class dash_params:
+class Dash_params:
     dist: float = 1
     time: float = 1
 
-class character_physics_controller:
+class PhysicsSystem:
     def __init__(self, speed: float, jump_force: float, gravity: float, dash_dist: float, dash_speed: float) -> None:
         self.__VELOCITY: Vector2 = Vector2(0, 0)
         self.__GRAVITY: float = gravity
-        self.__JUMP: jump_struct = jump_struct(force=jump_force)
-        self.__DASH: dash_struct = dash_struct(distance=dash_dist, speed=dash_speed)
+        self.__JUMP: Jump_info = Jump_info(force=jump_force)
+        self.__DASH: Dash_info = Dash_info(distance=dash_dist, speed=dash_speed)
         self.__SPEED: float = speed
         self.__dir: float = 1
 
@@ -177,7 +177,7 @@ class character_physics_controller:
     def on_ground(self) -> bool:
         return self.__JUMP.on_ground
 
-    def apply_diff(self, diff: character_diff) -> None:
+    def apply_diff(self, diff: Player_diff) -> None:
         self.__JUMP.air_jumps += diff.air_jumps
         self.__JUMP.def_air_jumps += diff.def_air_jumps
         self.__DASH.count += diff.dashes
@@ -250,7 +250,7 @@ class character_physics_controller:
     def move(self) -> Vector2:
         if (self.__VELOCITY.x != 0):
             self.__dir = direction(self.__VELOCITY.x > 0)
-            dash: dash_struct = self.__DASH
+            dash: Dash_info = self.__DASH
             if (dash.is_active):
                 if (abs(self.__VELOCITY.x) >= dash.left):
                     self.__VELOCITY.x = dash.left * self.__dir

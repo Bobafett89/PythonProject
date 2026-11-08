@@ -9,21 +9,22 @@ class Character(BasicSprite):
     def __init__(self, sprite_path: str, transform: Transform, jump: jump_params, dash: dash_params, tilemap: Tilemap) -> None:
         super().__init__(sprite_path, transform)
         from Game import GAME
-        jump_force = 2 * jump.height / jump.time * GAME.FIXED_DT()
-        gravity = jump_force / jump.time * GAME.FIXED_DT()
-        speed = jump.dist / (2 * jump.time) * GAME.FIXED_DT()
-        dash_speed = dash.dist / dash.time * GAME.FIXED_DT()
+        jump_force: float = 2 * jump.height / jump.time * GAME.FIXED_DT()
+        gravity: float = jump_force / jump.time * GAME.FIXED_DT()
+        speed: float = jump.dist / (2 * jump.time) * GAME.FIXED_DT()
+        dash_speed: float = dash.dist / dash.time * GAME.FIXED_DT()
 
         self.__PHYSICS: physics = physics(speed, jump_force, gravity, dash.dist, dash_speed)
         self.__TILEMAP: Tilemap = tilemap
 
     def update(self) -> None:
-        keys, new_keys = pygame.key.get_pressed(), pygame.key.get_just_pressed()
+        keys: list[bool] = pygame.key.get_pressed()
+        new_keys: list[bool] = pygame.key.get_just_pressed()
 
         if (new_keys[pygame.K_LSHIFT]):
             self.__PHYSICS.dash()
 
-        dir = 1 * keys[pygame.K_d] - 1 * keys[pygame.K_a]
+        dir: int = 1 * keys[pygame.K_d] - 1 * keys[pygame.K_a]
         self.__PHYSICS.run(dir)
 
         if (keys[pygame.K_w] and self.__PHYSICS.on_ground or new_keys[pygame.K_w]):
@@ -34,8 +35,8 @@ class Character(BasicSprite):
     def fixed_update(self) -> None:
         self.__PHYSICS.apply_grav()
 
-        keys = pygame.key.get_pressed()
-        dir = 1 * keys[pygame.K_d] - 1 * keys[pygame.K_a]
+        keys: list[bool] = pygame.key.get_pressed()
+        dir: int = 1 * keys[pygame.K_d] - 1 * keys[pygame.K_a]
         self.__PHYSICS.run(dir)
 
         if (keys[pygame.K_w] and self.__PHYSICS.on_ground):
@@ -47,7 +48,7 @@ class Character(BasicSprite):
 
     def death_check(self) -> None:
         from Game import GAME
-        hazard_contacts = self.__TILEMAP.collides("hazard", self, False)
+        hazard_contacts: list[BasicSprite] = self.__TILEMAP.collides("hazard", self, False)
         if (len(hazard_contacts) > 0):
             GAME.set_command(Control.restart_level())
 
@@ -55,7 +56,8 @@ class Character(BasicSprite):
         self.__PHYSICS.apply_diff(diff)
 
     def __debug(self) -> None:
-        keys, new_keys = pygame.key.get_pressed(), pygame.key.get_just_pressed()
+        keys: list[bool] = pygame.key.get_pressed()
+        new_keys: list[bool] = pygame.key.get_just_pressed()
         if (keys[pygame.K_UP]):
             self.__PHYSICS._character_physics_controller__VELOCITY.y = -self.__PHYSICS._character_physics_controller__JUMP.force
         if (keys[pygame.K_DOWN]):
@@ -69,7 +71,7 @@ class Tilemap:
     def __init__(self, size: Vector2) -> None:
         self.__SIZE: Vector2 = size
         self.__SPRITES: pygame.sprite.Group = pygame.sprite.Group()
-        self.__LAYERS: dict[TilemapLayer] = dict()
+        self.__LAYERS: dict[str, TilemapLayer] = dict()
 
     @property
     def SIZE(self) -> Vector2:
@@ -113,8 +115,8 @@ class TilemapLayer:
 
     def add_tile(self, sprite_path: str, tile_pos: Vector2) -> None:
         if (self.__MAP[int(tile_pos.x)][int(tile_pos.y)] == None):
-            pos = self.__convert_to_screen(tile_pos + Vector2(0.5, 0.5))
-            tile = BasicSprite(sprite_path, Transform(self.__TILESIZE, pos))
+            pos: Vector2 = self.__convert_to_screen(tile_pos + Vector2(0.5, 0.5))
+            tile: BasicSprite = BasicSprite(sprite_path, Transform(self.__TILESIZE, pos))
             self.__SPRITES.add(tile)
             self.__MAP[int(tile_pos.x)][int(tile_pos.y)] = tile
 
@@ -123,16 +125,16 @@ class TilemapLayer:
             return self.__MAP[int(tile_pos.x)][int(tile_pos.y)]
         else:
             if (pseudo_tile):
-                pos = self.__convert_to_screen(tile_pos + Vector2(0.5, 0.5))
+                pos: Vector2 = self.__convert_to_screen(tile_pos + Vector2(0.5, 0.5))
                 return BasicSprite(None, Transform(self.__TILESIZE, pos))
             else:
                 return None
 
     def collides(self, object: type[BasicSprite], pseudo_tiles: bool) -> list[BasicSprite]:
-        tilemap_pos = trunc_vector2(self.__convert_to_tilemap(object.pos))
-        border_offset = self.__convert_to_tilemap(object.edge_offset)
-        tile_offset = Vector2(ceil(border_offset.x), ceil(border_offset.y))
-        collisions = []
+        tilemap_pos: Vector2 = trunc_vector2(self.__convert_to_tilemap(object.pos))
+        border_offset: Vector2 = self.__convert_to_tilemap(object.edge_offset)
+        tile_offset: Vector2 = Vector2(ceil(border_offset.x), ceil(border_offset.y))
+        collisions: list[BasicSprite] = []
         for i in range(int(-tile_offset.x), int(tile_offset.x) + 1):
             for j in range(int(-tile_offset.y), int(tile_offset.y) + 1):
                 offset = Vector2(i, j)
@@ -163,7 +165,7 @@ class Collectable(BasicSprite):
         return self.__is_collected
 
     def fixed_update(self) -> None:
-        collide_with_character = self.overlap(self.__CHAR)
+        collide_with_character: bool = self.overlap(self.__CHAR)
         if (collide_with_character and not self.is_collected):
             self.__CHAR.apply_diff(self.__DIFF)
             self.__is_collected = True
@@ -184,8 +186,8 @@ class MovingCollectable(Collectable):
             target = self.__DESTINATION
         else:
             target = self.__START
-        left = (target - self.pos).length()
-        offset = self.__DIR.copy() * direction(self.__to_end)
+        left: float = (target - self.pos).length()
+        offset: Vector2 = self.__DIR.copy() * direction(self.__to_end)
         if (self.__SPEED < left):
             offset *= self.__SPEED
         else:

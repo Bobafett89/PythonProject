@@ -201,22 +201,22 @@ class character_physics_controller:
 
         if (self.__VELOCITY.y != 0):
             self.__JUMP.on_ground = False
-        new_state = next_state()
-        tiles = ground.collides(new_state, True)
+        new_state: BasicSprite = next_state()
+        tiles: list[BasicSprite] = ground.collides(new_state, True)
         tiles.sort(key = (lambda tile: (tile.pos - obj.pos).length()))
         for tile in tiles:
-            min_dist = new_state.edge_offset + tile.edge_offset
-            dir = tile.pos - obj.pos
-            dist = abs_vector2(tile.pos - new_state.pos)
-            if (dist.x < min_dist.x and dist.y < min_dist.y):
-                epsilon = 2 ** (-53)
-                size = min_dist - dist + Vector2(epsilon, epsilon)
-                offset = Vector2(0, 0)
-                if (abs(dir.x) < min_dist.x or (size.x >= size.y and not abs(dir.y) < min_dist.y)):
-                    offset.y = size.y * direction(dir.y < 0)
+            min_dist: Vector2 = new_state.edge_offset + tile.edge_offset
+            current_disp: Vector2 = tile.pos - obj.pos
+            new_dist: Vector2 = abs_vector2(tile.pos - new_state.pos)
+            if (new_dist.x < min_dist.x and new_dist.y < min_dist.y):
+                epsilon: float = 2 ** (-53)
+                overlap: Vector2 = min_dist - new_dist + Vector2(epsilon, epsilon)
+                offset: Vector2 = Vector2(0, 0)
+                if (abs(current_disp.x) < min_dist.x or (overlap.x >= overlap.y and not abs(current_disp.y) < min_dist.y)):
+                    offset.y = overlap.y * direction(current_disp.y < 0)
                     hit_floor()
                 else:
-                    offset.x = size.x * direction(dir.x < 0)
+                    offset.x = overlap.x * direction(current_disp.x < 0)
                     hit_wall()
                 self.__VELOCITY += offset
                 new_state = next_state()
@@ -250,7 +250,7 @@ class character_physics_controller:
     def move(self) -> Vector2:
         if (self.__VELOCITY.x != 0):
             self.__dir = direction(self.__VELOCITY.x > 0)
-            dash = self.__DASH
+            dash: dash_struct = self.__DASH
             if (dash.is_active):
                 if (abs(self.__VELOCITY.x) >= dash.left):
                     self.__VELOCITY.x = dash.left * self.__dir

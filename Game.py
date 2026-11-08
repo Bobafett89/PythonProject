@@ -6,6 +6,7 @@ from math import floor
 from os import path
 from json import loads, decoder
 from collections.abc import Callable
+from typing import Any, TextIO
 
 class GAME:
     __active: bool = None
@@ -36,10 +37,10 @@ class GAME:
 
     @classmethod
     def init(cls) -> None:
-        cls.__active: bool = False
-        cls.__FRAME: Frame = Frame()
+        cls.__active = False
+        cls.__FRAME = Frame()
         cls.__UI = UI()
-        cls.__control: Control = Control.wait()
+        cls.__control = Control.wait()
 
     @classmethod
     def start(cls, start_menu: UI_Screen) -> None:
@@ -89,21 +90,21 @@ class GAME:
 
     @classmethod
     def __start_levev_from_file(cls, level_name: str) -> None:
-        level_name = path.join("Levels", level_name)
+        level_name: str = path.join("Levels", level_name)
         try:
-            level_file = open(level_name)
+            level_file: TextIO = open(level_name)
         except FileNotFoundError:
             raise RuntimeError("File doesn't exist")
         else:
-            json_str = level_file.read()
+            json_str: str = level_file.read()
             level_file.close()
             try:
-                level_structure = loads(json_str)
+                level_structure: dict[str, Any] = loads(json_str)
             except decoder.JSONDecodeError:
                 raise RuntimeError("Json has wrong formating")
             else:
                 try:
-                    generator = Level.parse_level(level_structure)
+                    generator: Callable[[Level], None] = Level.parse_level(level_structure)
                 except RuntimeError:
                     raise RuntimeError("Json has wrong structure")
                 else:
@@ -250,8 +251,8 @@ class Level:
         return self.__GENERATOR
 
     @classmethod
-    def parse_level(cls, level_struct: dict) -> Callable[[Level], None]:
-        def has_keys(keys: list[str] | str, where: dict, type: type | tuple[type, ...]) -> bool:
+    def parse_level(cls, level_struct: dict[str, Any]) -> Callable[[Level], None]:
+        def has_keys(keys: list[str] | str, where: dict[str, Any], type: type | tuple[type, ...]) -> bool:
             has: bool = None
             if (isinstance(keys, str)):
                 has = keys in where and isinstance(where[keys], type)
@@ -263,11 +264,11 @@ class Level:
                         break
             return has
 
-        def has_sprite(where: dict):
+        def has_sprite(where: dict[str, Any]):
             return has_keys("spr", where, str)
 
-        def validate_list(arr: list, size: int, type: type) -> bool:
-            valid = False
+        def validate_list(arr: list[Any], size: int, type: type | tuple[type, ...]) -> bool:
+            valid: bool = False
             if (len(arr) == size or size == 0):
                 valid = True
                 for element in arr:
@@ -276,7 +277,7 @@ class Level:
                         break
             return valid
 
-        def validate_point(pos: list, is_int: bool = False) -> bool:
+        def validate_point(pos: list[Any], is_int: bool = False) -> bool:
             pos_type: type | tuple[type, ...] = None
             if (is_int):
                 pos_type = int
@@ -284,31 +285,31 @@ class Level:
                 pos_type = (int, float)
             return validate_list(pos, 2, pos_type)
 
-        def validate_poses(poses: list, is_int: bool = False, include_lines: bool = False) -> bool:
-            valid = validate_list(poses, 0, list)
+        def validate_poses(poses: list[Any], is_int: bool = False, include_lines: bool = False) -> bool:
+            valid: bool = validate_list(poses, 0, list)
             if (valid):
                 for pos in poses:
-                    valid_point = validate_point(pos, is_int)
-                    valid_line = include_lines and validate_list(pos, 2, list) and validate_point(pos[0], is_int) and validate_point(pos[1], is_int)
+                    valid_point: bool = validate_point(pos, is_int)
+                    valid_line: bool = include_lines and validate_list(pos, 2, list) and validate_point(pos[0], is_int) and validate_point(pos[1], is_int)
                     if (not (valid_point or valid_line)):
                         valid = False
                         break
             return valid
 
-        def has_valid_pos(where: dict) -> bool:
+        def has_valid_pos(where: dict[str, Any]) -> bool:
             return has_keys("pos", where, list) and validate_point(where["pos"])
 
-        def has_valid_poses(where: dict) -> bool:
+        def has_valid_poses(where: dict[str, Any]) -> bool:
             return has_keys("pos", where, list) and validate_poses(where["pos"])
 
-        def has_valid_size(where: dict) -> bool:
+        def has_valid_size(where: dict[str, Any]) -> bool:
             return has_keys("size", where, list) and validate_point(where["size"])
 
-        def validate_tilemap(tilemap: list) -> bool:
-            valid_tilemap = True
+        def validate_tilemap(tilemap: list[Any]) -> bool:
+            valid_tilemap: bool = True
             for tile in tilemap:
-                valid_sprite = has_sprite(tile)
-                valid_pos = has_keys("pos", tile, list) and validate_poses(tile["pos"], True, True)
+                valid_sprite: bool = has_sprite(tile)
+                valid_pos: bool = has_keys("pos", tile, list) and validate_poses(tile["pos"], True, True)
                 valid_tilemap = valid_sprite and valid_pos
                 if (not valid_tilemap):
                     break
@@ -317,48 +318,48 @@ class Level:
         def generator(level: Level) -> None:
             level_size: Vector2 = cls.__DEF_LEVEL_SIZE * level_struct["size_factor"]
 
-            def point_to_vector(point: list[float | int]):
+            def point_to_vector(point: list[float | int]) -> Vector2:
                 return Vector2(point[0], point[1])
 
-            def build_tilemap(tilemap: list[dict], add_tile: Callable[[str, Vector2], None]):
+            def build_tilemap(tilemap: list[dict[str, Any]], add_tile: Callable[[str, Vector2], None]) -> None:
                 for tile in tilemap:
                     for pos in tile["pos"]:
                         if (isinstance(pos[0], list)):
-                            first_pos = point_to_vector(pos[0])
-                            second_pos = point_to_vector(pos[1])
-                            leftop = Vector2(min(first_pos.x, second_pos.x), min(first_pos.y, second_pos.y))
-                            botright = Vector2(max(first_pos.x, second_pos.x), max(first_pos.y, second_pos.y))
-                            size = botright - leftop + Vector2(1, 1)
+                            first_pos: Vector2 = point_to_vector(pos[0])
+                            second_pos: Vector2 = point_to_vector(pos[1])
+                            leftop: Vector2 = Vector2(min(first_pos.x, second_pos.x), min(first_pos.y, second_pos.y))
+                            botright: Vector2 = Vector2(max(first_pos.x, second_pos.x), max(first_pos.y, second_pos.y))
+                            size: Vector2 = botright - leftop + Vector2(1, 1)
                             for i in range(int(size.x)):
                                 for j in range(int(size.y)):
                                     offset = Vector2(i, j)
                                     add_tile(tile["spr"], leftop + offset)
                         else:
-                            tile_pos = point_to_vector(pos)
+                            tile_pos: Vector2 = point_to_vector(pos)
                             add_tile(tile["spr"], tile_pos)
 
             def to_screen_vector(level_vector: Vector2) -> Vector2:
                 return vector2_div(level_vector, level_size)
 
-            char = level_struct["char"]
-            jump = char["jump"]
-            dash = char["dash"]
-            ground = level_struct["tiles"]["grnd"]
-            hazard = level_struct["tiles"]["hzrd"]
-            finishes = level_struct["finishes"]
-            static_items = level_struct["items"]["stc"]
-            moving_items = level_struct["items"]["mov"]
+            char: dict[str, Any] = level_struct["char"]
+            jump: dict[str, Any] = char["jump"]
+            dash: dict[str, Any] = char["dash"]
+            ground: dict[str, Any] = level_struct["tiles"]["grnd"]
+            hazard: dict[str, Any] = level_struct["tiles"]["hzrd"]
+            finishes: dict[str, Any] = level_struct["finishes"]
+            static_items: dict[str, Any] = level_struct["items"]["stc"]
+            moving_items: dict[str, Any] = level_struct["items"]["mov"]
 
-            char_pos = to_screen_vector(point_to_vector(char["pos"]))
-            char_size = to_screen_vector(point_to_vector(char["size"]))
-            jump = jump_params(jump["dist"] / level_size.x, jump["height"] / level_size.y, jump["time"])
-            dash = dash_params(dash["dist"] / level_size.x, dash["time"])
+            char_pos: Vector2 = to_screen_vector(point_to_vector(char["pos"]))
+            char_size: Vector2 = to_screen_vector(point_to_vector(char["size"]))
+            jump: jump_params = jump_params(jump["dist"] / level_size.x, jump["height"] / level_size.y, jump["time"])
+            dash: dash_params = dash_params(dash["dist"] / level_size.x, dash["time"])
             level.add_character(char["spr"], Transform(char_size, char_pos), jump, dash)
 
             for finish in finishes:
                 for pos in finish["pos"]:
-                    finish_pos = to_screen_vector(point_to_vector(pos))
-                    finish_size = to_screen_vector(point_to_vector(finish["size"]))
+                    finish_pos: Vector2 = to_screen_vector(point_to_vector(pos))
+                    finish_size: Vector2 = to_screen_vector(point_to_vector(finish["size"]))
                     level.add_finish(finish["spr"], Transform(finish_size, finish_pos))
 
             build_tilemap(ground, level.add_ground_tile)
@@ -367,81 +368,81 @@ class Level:
 
             for item in static_items:
                 for pos in item["pos"]:
-                    item_size = to_screen_vector(point_to_vector(item["size"]))
-                    item_pos = to_screen_vector(point_to_vector(pos))
-                    item_diff = character_diff(item["diff"][0], item["diff"][1], item["diff"][2], item["diff"][3])
+                    item_size: Vector2 = to_screen_vector(point_to_vector(item["size"]))
+                    item_pos: Vecttor2 = to_screen_vector(point_to_vector(pos))
+                    item_diff: character_diff = character_diff(item["diff"][0], item["diff"][1], item["diff"][2], item["diff"][3])
                     level.add_static_item(item["spr"], Transform(item_size, item_pos), item_diff)
 
             for item in moving_items:
                 for i in range(len(item["pos"])):
-                    item_size = to_screen_vector(point_to_vector(item["size"]))
-                    item_pos = to_screen_vector(point_to_vector(item["pos"][i]))
-                    item_dest = to_screen_vector(point_to_vector(item["dest"][i]))
-                    item_speed = (item_dest - item_pos).length() / item["time"]
-                    item_diff = character_diff(item["diff"][0], item["diff"][1], item["diff"][2], item["diff"][3])
+                    item_size: Vector2 = to_screen_vector(point_to_vector(item["size"]))
+                    item_pos: Vector2 = to_screen_vector(point_to_vector(item["pos"][i]))
+                    item_dest: Vector2 = to_screen_vector(point_to_vector(item["dest"][i]))
+                    item_speed: float = (item_dest - item_pos).length() / item["time"]
+                    item_diff: character_diff = character_diff(item["diff"][0], item["diff"][1], item["diff"][2], item["diff"][3])
                     level.add_moving_item(item["spr"], Transform(item_size, item_pos), item_diff, item_speed, item_dest)
 
-        valid_size_factor = has_keys("size_factor", level_struct, int)
+        valid_size_factor: bool = has_keys("size_factor", level_struct, int)
 
-        valid_tiles = has_keys("tilemap_size", level_struct, list) and validate_point(level_struct["tilemap_size"], True)
+        valid_tiles: bool = has_keys("tilemap_size", level_struct, list) and validate_point(level_struct["tilemap_size"], True)
 
-        valid_char = has_keys("char", level_struct, dict)
+        valid_char: bool = has_keys("char", level_struct, dict)
         if (valid_char):
-            char = level_struct["char"]
-            valid_sprite = has_sprite(char)
-            valid_size = has_valid_size(char)
-            valid_pos = has_valid_pos(char)
-            valid_jump = has_keys("jump", char, dict) and has_keys(["height", "dist", "time", "temp", "def"], char["jump"], (int, float))
-            valid_dash = has_keys("dash", char, dict) and has_keys(["dist", "time", "temp", "def"], char["dash"], (int, float))
-            valid_char = valid_sprite and valid_size and valid_pos and valid_jump and valid_dash
+            char: dict[str, Any] = level_struct["char"]
+            valid_sprite: bool = has_sprite(char)
+            valid_size: bool = has_valid_size(char)
+            valid_pos: bool = has_valid_pos(char)
+            valid_jump: bool = has_keys("jump", char, dict) and has_keys(["height", "dist", "time", "temp", "def"], char["jump"], (int, float))
+            valid_dash: bool = has_keys("dash", char, dict) and has_keys(["dist", "time", "temp", "def"], char["dash"], (int, float))
+            valid_char: bool = valid_sprite and valid_size and valid_pos and valid_jump and valid_dash
 
-        tiles = dict()
+        tiles: dict[str, Any] = dict()
         if (has_keys("tiles", level_struct, dict)):
             tiles = level_struct["tiles"]
-        valid_ground = has_keys("grnd", tiles, list) and validate_list(tiles["grnd"], 0, dict) and validate_tilemap(tiles["grnd"])
-        valid_hazard = has_keys("hzrd", tiles, list) and validate_list(tiles["hzrd"], 0, dict) and validate_tilemap(tiles["hzrd"])
+        valid_ground: bool = has_keys("grnd", tiles, list) and validate_list(tiles["grnd"], 0, dict) and validate_tilemap(tiles["grnd"])
+        valid_hazard: bool = has_keys("hzrd", tiles, list) and validate_list(tiles["hzrd"], 0, dict) and validate_tilemap(tiles["hzrd"])
 
-        valid_finishes = has_keys("finishes", level_struct, list) and validate_list(level_struct["finishes"], 0, dict)
-        valid_finishes = valid_finishes and len(level_struct["finishes"]) > 0
+        valid_finishes: bool = has_keys("finishes", level_struct, list) and validate_list(level_struct["finishes"], 0, dict)
+        valid_finishes: bool = valid_finishes and len(level_struct["finishes"]) > 0
         if (valid_finishes):
             for finish in level_struct["finishes"]:
-                valid_spr = has_sprite(finish)
-                valid_size = has_valid_size(finish)
-                valid_pos = has_valid_poses(finish)
-                valid_finishes = valid_spr and valid_size and valid_pos
+                valid_spr: bool = has_sprite(finish)
+                valid_size: bool = has_valid_size(finish)
+                valid_pos: bool = has_valid_poses(finish)
+                valid_finishes: bool = valid_spr and valid_size and valid_pos
                 if (not valid_finishes):
                     break
 
-        items = dict()
+        items: dict[str, Any] = dict()
         if (has_keys("items", level_struct, dict)):
             items = level_struct["items"]
 
-        valid_static_items = has_keys("stc", items, list) and validate_list(items["stc"], 0, dict)
+        valid_static_items: bool = has_keys("stc", items, list) and validate_list(items["stc"], 0, dict)
         if (valid_static_items):
             for item in items["stc"]:
-                valid_sprite = has_sprite(item)
-                valid_size = has_valid_size(item)
-                valid_diff = has_keys("diff", item, list) and validate_list(item["diff"], 4, int)
-                valid_pos = has_valid_poses(item)
-                valid_static_items = valid_sprite and valid_size and valid_diff and valid_pos
+                valid_sprite: bool = has_sprite(item)
+                valid_size: bool = has_valid_size(item)
+                valid_diff: bool = has_keys("diff", item, list) and validate_list(item["diff"], 4, int)
+                valid_pos: bool = has_valid_poses(item)
+                valid_static_items: bool = valid_sprite and valid_size and valid_diff and valid_pos
                 if (not valid_static_items):
                     break
 
-        valid_moving_items = has_keys("mov", items, list) and validate_list(items["mov"], 0, dict)
+        valid_moving_items: bool = has_keys("mov", items, list) and validate_list(items["mov"], 0, dict)
         if (valid_moving_items):
             for item in items["mov"]:
-                valid_sprite = has_sprite(item)
-                valid_size = has_valid_size(item)
-                valid_diff = has_keys("diff", item, list) and validate_list(item["diff"], 4, int)
-                valid_time = has_keys("time", item, (int, float))
-                valid_pos = has_valid_poses(item)
-                valid_dest = valid_pos and has_keys("dest", item, list) and len(item["dest"]) == len(item["pos"]) and validate_poses(item["dest"])
-                valid_moving_items = valid_sprite and valid_diff and valid_pos and valid_time and valid_dest
+                valid_sprite: bool = has_sprite(item)
+                valid_size: bool = has_valid_size(item)
+                valid_diff: bool = has_keys("diff", item, list) and validate_list(item["diff"], 4, int)
+                valid_time: bool = has_keys("time", item, (int, float))
+                valid_pos: bool = has_valid_poses(item)
+                valid_dest: bool = valid_pos and has_keys("dest", item, list) and len(item["dest"]) == len(item["pos"]) and validate_poses(item["dest"])
+                valid_moving_items: bool = valid_sprite and valid_diff and valid_pos and valid_time and valid_dest
                 if (not valid_moving_items):
                     break
 
-        valid_tilemaps = valid_tiles and valid_ground and valid_hazard
-        valid_items = valid_static_items and valid_moving_items
+        valid_tilemaps: bool = valid_tiles and valid_ground and valid_hazard
+        valid_items: bool = valid_static_items and valid_moving_items
         if (not (valid_size_factor and valid_char and valid_tilemaps and valid_finishes and valid_items)):
             raise RuntimeError("Not valid structure of a level")
 
@@ -483,14 +484,14 @@ class Level:
 
     def add_static_item(self, sprite_path: str, transform: Transform, diff: character_diff) -> None:
         from Objects import Collectable
-        collectable = Collectable(sprite_path, transform, diff, self.__PLAYER)
+        collectable: Collectable = Collectable(sprite_path, transform, diff, self.__PLAYER)
         self.__OBJECTS.append(collectable)
         self.__COLLECTABLES.append(collectable)
         self.__SPRITES.add(collectable)
 
     def add_moving_item(self, sprite_path: str, transform: Transform, diff: character_diff, speed: float, destination: Vector2) -> None:
         from Objects import MovingCollectable
-        collectable = MovingCollectable(sprite_path, transform, diff, speed, destination, self.__PLAYER)
+        collectable: Collectable = MovingCollectable(sprite_path, transform, diff, speed, destination, self.__PLAYER)
         self.__OBJECTS.append(collectable)
         self.__COLLECTABLES.append(collectable)
         self.__SPRITES.add(collectable)

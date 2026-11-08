@@ -24,42 +24,43 @@ def load_level(level_path: str) -> function:
     return start_level
 
 def level_selection() -> UI_Screen:
-    files = listdir("Levels")
-    files = list(filter(lambda file: file.endswith(".json"), files))
-    grid = Vector2(5, 3)
-    levels_per_page = int(grid.x * (grid.y - 1))
-    pages_count = max(1, ceil(len(files) / levels_per_page))
-    button_size = Vector2(0.1, 0.1 / 9 * 16)
-    gaps = grid + Vector2(1, 1)
-    buttons_area = vector2_mult(button_size, grid)
-    gap = vector2_div(Vector2(1, 1) - buttons_area, gaps)
-    grid_offset = button_size + gap
-    text_size = Vector2(button_size.x, 0) + gap / 2
-    pages: list[UI_Screen] = []
     def calc_pos(grid_pos: Vector2) -> Vector2:
         return vector2_mult(grid_pos, grid_offset) + gap + button_size / 2
+
+    files: list[str] = listdir("Levels")
+    files = list(filter(lambda file: file.endswith(".json"), files))
+    grid: Vector2 = Vector2(5, 3)
+    levels_per_page: int = int(grid.x * (grid.y - 1))
+    pages_count: int = max(1, ceil(len(files) / levels_per_page))
+    button_size: Vector2 = Vector2(0.1, 0.1 / 9 * 16)
+    gaps: Vector2 = grid + Vector2(1, 1)
+    buttons_area: Vector2 = vector2_mult(button_size, grid)
+    gap: Vector2 = vector2_div(Vector2(1, 1) - buttons_area, gaps)
+    grid_offset: Vector2 = button_size + gap
+    text_size: Vector2 = Vector2(button_size.x, 0) + gap / 2
+    pages: list[UI_Screen] = []
     for page in range(pages_count):
         pages.append(UI_Screen())
         for level_number in range(min(levels_per_page, len(files) - page * levels_per_page)):
-            level = level_number + page * levels_per_page
-            grid_pos = Vector2(level_number % grid.x, level_number // grid.x)
-            open_pos = calc_pos(grid_pos)
+            level: int = level_number + page * levels_per_page
+            grid_pos: Vector2 = Vector2(level_number % grid.x, level_number // grid.x)
+            open_pos: Vector2 = calc_pos(grid_pos)
             pages[page].add_button("", Transform(button_size, open_pos), load_level(files[level]))
 
-            level_name = files[level].replace(".json", "")
-            text_pos = open_pos + Vector2(0, button_size.y / 2 + gap.y / 4)
+            level_name: str = files[level].replace(".json", "")
+            text_pos: Vector2 = open_pos + Vector2(0, button_size.y / 2 + gap.y / 4)
             pages[page].add_text(level_name, Transform(text_size, text_pos))
-        return_pos = Vector2(0.5, calc_pos(Vector2(0, grid.y - 1)).y)
+        return_pos: Vector2 = Vector2(0.5, calc_pos(Vector2(0, grid.y - 1)).y)
         pages[page].add_button("", Transform(button_size, return_pos), open_main_menu)
     if (pages_count > 1):
         for page in range(len(pages)):
             if (page < len(pages) - 1):
-                grid_pos = grid - Vector2(1, 1)
-                next_pos = calc_pos(grid_pos)
+                grid_pos: Vector2 = grid - Vector2(1, 1)
+                next_pos: Vector2 = calc_pos(grid_pos)
                 pages[page].add_button("", Transform(button_size, next_pos), switch_to(pages[page+1]))
             if (page > 0):
-                grid_pos = Vector2(0, grid.y - 1)
-                back_pos = calc_pos(grid_pos)
+                grid_pos: Vector2 = Vector2(0, grid.y - 1)
+                back_pos: Vector2 = calc_pos(grid_pos)
                 pages[page].add_button("", Transform(button_size, back_pos), switch_to(pages[page-1]))
     return pages[0]
 

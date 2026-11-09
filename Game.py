@@ -1,7 +1,7 @@
 import pygame
 from pygame import Vector2
 from BasicObjects import Control, Command, Frame
-from Objects import Level
+from LevelObjects import Level
 from UI import UI
 from os import path
 from json import loads, decoder

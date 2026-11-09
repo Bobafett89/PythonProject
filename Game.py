@@ -27,7 +27,7 @@ class GAME:
         cls.__control = Control.wait()
 
     @classmethod
-    def start(cls, start_menu: UI_Screen) -> None:
+    def start(cls, start_menu: UIScreen) -> None:
         cls.__UI.set_start_menu(start_menu)
         cls.__open_main_menu()
         cls.__active = True
@@ -50,7 +50,7 @@ class GAME:
                 cls.__FRAME.add_sprite_group(cls.__UI.SPRITES)
             case Command.OPEN_LEVEL:
                 try:
-                    cls.__start_levev_from_file(cls.__control.parameter)
+                    cls.__start_level_from_file(cls.__control.parameter)
                 except RuntimeError:
                     pass
             case Command.RESTART_LEVEL:
@@ -75,7 +75,7 @@ class GAME:
         cls.__FRAME.next()
 
     @classmethod
-    def __start_levev_from_file(cls, level_name: str) -> None:
+    def __start_level_from_file(cls, level_name: str) -> None:
         level_name: str = path.join("Levels", level_name)
         try:
             level_file: TextIO = open(level_name)

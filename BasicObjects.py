@@ -158,7 +158,7 @@ class Control:
         return Control(Command.OPEN_MENU, None)
 
     @staticmethod
-    def switch_ui(screen: UI_Screen) -> Control:
+    def switch_ui(screen: UIScreen) -> Control:
         return Control(Command.SWITCH_UI, screen)
 
     @staticmethod
@@ -185,36 +185,36 @@ class Transform:
 @dataclass
 class Jump_info:
     on_ground: bool = False
-    force: int = 5
+    force: int = 0
     air_jumps: int = 0
     def_air_jumps: int = 0
 
 @dataclass
 class Dash_info:
     is_active: bool = False
-    speed: float = 3
-    distance: float = 3
+    speed: float = 0
+    distance: float = 0
     left: float = 0
     count: int = 0
     def_count: int = 0
 
 @dataclass
 class Player_diff:
-    air_jumps: int = 0
-    def_air_jumps: int = 0
-    dashes: int = 0
-    def_dashes: int = 0
+    air_jumps: int
+    def_air_jumps: int
+    dashes: int
+    def_dashes: int
 
 @dataclass
 class Jump_params:
-    dist: float = 1
-    height: float = 1
-    time: float = 1
+    dist: float
+    height: float
+    time: float
 
 @dataclass
 class Dash_params:
-    dist: float = 1
-    time: float = 1
+    dist: float
+    time: float
 
 class PhysicsSystem:
     def __init__(self, speed: float, jump_force: float, gravity: float, dash_dist: float, dash_speed: float) -> None:

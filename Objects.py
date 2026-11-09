@@ -257,6 +257,7 @@ class Level:
                 object.fixed_update()
             if (self.__PLAYER.dead):
                 self.__set_command(Control.restart_level())
+                break
             for finish in self.__FINISHES:
                 if (finish.finished):
                     self.__set_command(Control.close_level())
@@ -297,6 +298,7 @@ class Level:
     def __collect_items(self) -> None:
         for object in self.__COLLECTABLES:
             if (object.is_collected):
+                self.__PLAYER.apply_diff(object.DIFF)
                 self.__OBJECTS.remove(object)
                 self.__COLLECTABLES.remove(object)
                 self.__SPRITES.remove(object)
@@ -351,7 +353,7 @@ class Player(BasicSprite):
         if (len(hazard_contacts) > 0):
             self.__dead = True
 
-    def apply_diff(self, diff: chacracter_diff):
+    def apply_diff(self, diff: chacracter_diff) -> None:
         self.__PHYSICS.apply_diff(diff)
 
     def __debug(self) -> None:
@@ -457,11 +459,15 @@ class Finish(BasicSprite):
             self.__finished = True
 
 class Collectable(BasicSprite):
-    def __init__(self, sprite_path: str | None, transform: Transform, diff: Player_diff, player: type[Player]) -> None:
+    def __init__(self, sprite_path: str | None, transform: Transform, diff: Player_diff, player: type[BasicSprite]) -> None:
         super().__init__(sprite_path, transform)
         self.__DIFF: Player_diff = diff
         self.__is_collected: bool = False
-        self.__PLAYER: type[Player] = player
+        self.__PLAYER: type[BasicSprite] = player
+
+    @property
+    def DIFF(self) -> Player_diff:
+        return self.__DIFF
 
     @property
     def is_collected(self) -> bool:
@@ -470,11 +476,10 @@ class Collectable(BasicSprite):
     def fixed_update(self) -> None:
         collide_with_player: bool = self.overlap(self.__PLAYER)
         if (collide_with_player and not self.is_collected):
-            self.__PLAYER.apply_diff(self.__DIFF)
             self.__is_collected = True
 
 class MovingCollectable(Collectable):
-    def __init__(self, sprite_path: str | None, transform: Transform, diff: Player_diff, speed: float, destination: Vector2, player: type[Player]) -> None:
+    def __init__(self, sprite_path: str | None, transform: Transform, diff: Player_diff, speed: float, destination: Vector2, player: type[BasicSprite]) -> None:
         super().__init__(sprite_path, transform, diff, player)
         self.__SPEED: float = speed * Frame.FIXED_DT()
         self.__START: Vector2 = self.pos.copy()

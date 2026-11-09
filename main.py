@@ -3,7 +3,7 @@ from pygame import Vector2
 from Utils import vector2_div, vector2_mult
 from BasicObjects import Control, Transform
 from Game import GAME
-from UI import UI_Screen
+from UI import UIScreen
 from os import listdir
 from math import ceil
 from collections.abc import Callable
@@ -11,7 +11,7 @@ from collections.abc import Callable
 def close_game() -> Control:
     return Control.close_game()
 
-def switch_to(screen: UI_Screen) -> Callable[[], Control]:
+def switch_to(screen: UIScreen) -> Callable[[], Control]:
     def change() -> Control:
         return Control.switch_ui(screen)
     return change
@@ -24,7 +24,7 @@ def load_level(level_path: str) -> Callable[[], Control]:
         return Control.open_level(level_path)
     return start_level
 
-def level_selection() -> UI_Screen:
+def level_selection() -> UIScreen:
     def calc_pos(grid_pos: Vector2) -> Vector2:
         return vector2_mult(grid_pos, grid_offset) + gap + button_size / 2
 
@@ -39,9 +39,9 @@ def level_selection() -> UI_Screen:
     gap: Vector2 = vector2_div(Vector2(1, 1) - buttons_area, gaps)
     grid_offset: Vector2 = button_size + gap
     text_size: Vector2 = Vector2(button_size.x, 0) + gap / 2
-    pages: list[UI_Screen] = []
+    pages: list[UIScreen] = []
     for page in range(pages_count):
-        pages.append(UI_Screen())
+        pages.append(UIScreen())
         for level_number in range(min(levels_per_page, len(files) - page * levels_per_page)):
             level: int = level_number + page * levels_per_page
             grid_pos: Vector2 = Vector2(level_number % grid.x, level_number // grid.x)
@@ -70,7 +70,7 @@ def open_level_selection() -> Control:
 
 pygame.init()
 GAME.init()
-menu = UI_Screen()
+menu = UIScreen()
 menu.add_button("CharBlock.png", Transform(Vector2(0.5, 0.2), Vector2(0.5, 0.3)), open_level_selection)
 menu.add_button("HazardBlock.png", Transform(Vector2(0.5, 0.2), Vector2(0.5, 0.7)), close_game)
 GAME.start(menu)

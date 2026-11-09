@@ -6,8 +6,8 @@ from collections.abc import Callable
 
 class UI:
     def __init__(self) -> None:
-        self.__start_menu: UI_Screen = None
-        self.__current_screen: UI_Screen = None
+        self.__start_menu: UIScreen = None
+        self.__current_screen: UIScreen = None
 
     @property
     def SPRITES(self) -> pygame.sprite.Group | None:
@@ -16,13 +16,13 @@ class UI:
         else:
             return None
 
-    def set_start_menu(self, start_menu: UI_Screen) -> None:
+    def set_start_menu(self, start_menu: UIScreen) -> None:
         self.__start_menu = start_menu
 
     def open_start_menu(self) -> None:
         self.switch_ui(self.__start_menu)
 
-    def switch_ui(self, screen: UI_Screen) -> None:
+    def switch_ui(self, screen: UIScreen) -> None:
         self.clear_ui()
         self.__current_screen = screen
 
@@ -37,7 +37,7 @@ class UI:
             command = Control.wait()
         return command
 
-class UI_Screen:
+class UIScreen:
     def __init__(self) -> None:
         self.__SPRITES: pygame.sprite.Group = pygame.sprite.Group()
         self.__BUTTONS: list[Button] = []

@@ -121,57 +121,102 @@ Parser.add_transition("Method_param", "Method_with_params", "Type", pass_token)
 Parser.add_transition("Method_with_params", "Method_param", "Name", pass_token)
 Parser.add_transition("Method_with_params", "Body", "Type", pass_token)
 
-with open(sys.argv[1]) as file:
-    class_fold: int = 0
-    in_init: int = False
-    in_class: bool = False
-    in_enum: bool = False
-    is_property: bool = False
-    for file_line in file:
-        fold_level: int = file_line.count("    ")
-        line: str = file_line.strip()
-        if (line != "" and in_class and fold_level < class_fold):
-            in_enum = False
-            in_class = False
-            class_fold = 0
-            Parser.enter_token(END)
-        if (line.startswith("@")):
-            line = line.removeprefix("@")
-            match (line):
-                case "dataclass":
-                    if (fold_level == 0):
-                        Parser.enter_token(DATACLASS)
-                case "property":
-                    if (fold_level == class_fold):
-                        Parser.enter_token(ATTRIBUTE)
-                        is_property = True
-        elif (line.startswith("class ") and fold_level == 0):
-            in_class = True
-            class_fold = fold_level + 1
-            Parser.enter_token(CLASS)
-            in_init: bool = False
-            line = line.removeprefix("class ")
-            line = line.removesuffix(":")
-            par_pos: int = line.find("(")
-            extension: str = ""
-            if (par_pos != -1):
-                extension = line[par_pos:]
-                line = line.removesuffix(extension)
-            if (extension.find("Enum") != -1):
-                Parser.enter_token(ENUM)
-                in_enum = True
-            Parser.enter_token(NameToken(line))
-        elif (line.startswith("def ")):
-            if (fold_level == class_fold and in_class):
-                Parser.enter_token(METHOD)
-                line = line.removeprefix("def ")
+for i in range(1, len(sys.argv)):
+    with open(sys.argv[i]) as file:
+        class_fold: int = 0
+        in_init: int = False
+        in_class: bool = False
+        is_dataclass: bool = False
+        in_enum: bool = False
+        is_property: bool = False
+        for file_line in file:
+            fold_level: int = file_line.count("    ")
+            line: str = file_line.strip()
+            if (line != "" and in_class and fold_level < class_fold):
+                in_enum = False
+                in_class = False
+                is_dataclass = False
+                class_fold = 0
+                Parser.enter_token(END)
+            if (line.startswith("@")):
+                line = line.removeprefix("@")
+                match (line):
+                    case "dataclass":
+                        if (fold_level == 0):
+                            Parser.enter_token(DATACLASS)
+                            is_dataclass = True
+                    case "property":
+                        if (fold_level == class_fold):
+                            Parser.enter_token(ATTRIBUTE)
+                            is_property = True
+            elif (line.startswith("class ") and fold_level == 0):
+                in_class = True
+                class_fold = fold_level + 1
+                Parser.enter_token(CLASS)
+                in_init: bool = False
+                line = line.removeprefix("class ")
                 line = line.removesuffix(":")
-                return_type: str = line[line.find("-> ") + 3:]
-                line = line.removesuffix(" -> " + return_type)
-                params: str = line[line.find("("):]
-                line = line.removesuffix(params)
-                if (line != "__init__"):
-                    in_init: bool = False
+                par_pos: int = line.find("(")
+                extension: str = ""
+                if (par_pos != -1):
+                    extension = line[par_pos:]
+                    line = line.removesuffix(extension)
+                if (extension.find("Enum") != -1):
+                    Parser.enter_token(ENUM)
+                    in_enum = True
+                Parser.enter_token(NameToken(line))
+            elif (line.startswith("def ")):
+                if (fold_level == class_fold and in_class):
+                    Parser.enter_token(METHOD)
+                    line = line.removeprefix("def ")
+                    line = line.removesuffix(":")
+                    return_type: str = line[line.find("-> ") + 3:]
+                    line = line.removesuffix(" -> " + return_type)
+                    params: str = line[line.find("("):]
+                    line = line.removesuffix(params)
+                    if (line != "__init__"):
+                        in_init: bool = False
+                        visibility: Token = PUBLIC
+                        if (line.startswith("__")):
+                            visibility = PRIVATE
+                            line = line.removeprefix("__")
+                        elif (line.startswith("_")):
+                            visibility = PROTECTED
+                            line = line.removeprefix("_")
+                        Parser.enter_token(visibility)
+                        if (is_property):
+                            line = "/" + line
+                            is_property = False
+                        Parser.enter_token(NameToken(line))
+                        params = params.removeprefix("(")
+                        params = params.removesuffix(")")
+                        params = params.replace(":", "")
+                        params = params.replace(" | ", ".|.")
+                        next_comma: int = params.find(',')
+                        while next_comma != -1:
+                            before = params[:next_comma]
+                            open_brackets = before.count("[")
+                            closed_brackets = before.count("]")
+                            if (open_brackets == closed_brackets):
+                                params = params[:next_comma] + params[next_comma+1:]
+                            next_comma = params.find(",", next_comma + 1)
+                        params = params.replace(", ", ",.")
+                        params = params.removeprefix("self")
+                        params = params.removeprefix("cls")
+                        params = params.strip()
+                        if (params != ""):
+                            param_list: list[str] = params.split(" ")
+                            for i in range(0, len(param_list), 2):
+                                Parser.enter_token(NameToken(param_list[i]))
+                                Parser.enter_token(TypeToken(param_list[i + 1].replace(".|.", " | ").replace(",.", ", ")))
+                        Parser.enter_token(TypeToken(return_type))
+                    else:
+                        in_init: bool = True
+                        Parser.enter_token(INIT)
+            elif ((line.find(": ") != -1 or in_enum) and (line.find(" = ") != -1 or is_dataclass) and (fold_level == class_fold or (in_init and line.startswith("self.")))):
+                Parser.enter_token(ATTRIBUTE)
+                if (not in_enum):
+                    line = line.removeprefix("self.")
                     visibility: Token = PUBLIC
                     if (line.startswith("__")):
                         visibility = PRIVATE
@@ -180,55 +225,15 @@ with open(sys.argv[1]) as file:
                         visibility = PROTECTED
                         line = line.removeprefix("_")
                     Parser.enter_token(visibility)
-                    if (is_property):
-                        line = "/" + line
-                        is_property = False
+                    if (line.find(" = ") != -1):
+                        line = line[:line.find(" = ")]
+                    line = line.replace(":", "")
+                    attr_type: str = line[line.find(" ") + 1:]
+                    line = line.removesuffix(" " + attr_type)
                     Parser.enter_token(NameToken(line))
-                    params = params.removeprefix("(")
-                    params = params.removesuffix(")")
-                    params = params.replace(":", "")
-                    params = params.replace(" | ", ".|.")
-                    next_comma: int = params.find(',')
-                    while next_comma != -1:
-                        before = params[:next_comma]
-                        open_brackets = before.count("[")
-                        closed_brackets = before.count("]")
-                        if (open_brackets == closed_brackets):
-                            params = params[:next_comma] + params[next_comma+1:]
-                        next_comma = params.find(",", next_comma + 1)
-                    params = params.replace(", ", ",.")
-                    params = params.removeprefix("self")
-                    params = params.removeprefix("cls")
-                    params = params.strip()
-                    if (params != ""):
-                        param_list: list[str] = params.split(" ")
-                        for i in range(0, len(param_list), 2):
-                            Parser.enter_token(NameToken(param_list[i]))
-                            Parser.enter_token(TypeToken(param_list[i + 1].replace(".|.", " | ").replace(",.", ", ")))
-                    Parser.enter_token(TypeToken(return_type))
+                    Parser.enter_token(TypeToken(attr_type))
                 else:
-                    in_init: bool = True
-                    Parser.enter_token(INIT)
-        elif ((line.find(": ") != -1 or in_enum) and line.find(" = ") != -1 and (fold_level == class_fold or (in_init and line.startswith("self.")))):
-            Parser.enter_token(ATTRIBUTE)
-            if (not in_enum):
-                line = line.removeprefix("self.")
-                visibility: Token = PUBLIC
-                if (line.startswith("__")):
-                    visibility = PRIVATE
-                    line = line.removeprefix("__")
-                elif (line.startswith("_")):
-                    visibility = PROTECTED
-                    line = line.removeprefix("_")
-                Parser.enter_token(visibility)
-                line = line[:line.find(" = ")]
-                line = line.replace(":", "")
-                attr_type: str = line[line.find(" ") + 1:]
-                line = line.removesuffix(" " + attr_type)
-                Parser.enter_token(NameToken(line))
-                Parser.enter_token(TypeToken(attr_type))
-            else:
-                line = line[:line.find(" ")]
-                Parser.enter_token(NameToken(line))
-Parser.enter_token(END)
+                    line = line[:line.find(" ")]
+                    Parser.enter_token(NameToken(line))
+    Parser.enter_token(END)
 print(Parser.get_var("SM").get_var("scheme"))

@@ -1,10 +1,64 @@
 import pygame
 from pygame import Vector2
 from enum import Enum, auto
-from Utils import vector2_mult, vector2_div, round_vector2, abs_vector2, direction
+from Utils import vector2_mult, round_vector2, abs_vector2, direction, clamp
 from typing import Any
 from dataclasses import dataclass
 from os import path
+from math import floor
+
+class Frame:
+    __FIXED_DT: float = 1 / 50
+    __MAX_DT: float = 1 / 30
+    __screen_size: tuple[int, int] = (1920, 1080)
+
+    def __init__(self) -> None:
+        screen_flags = pygame.FULLSCREEN | pygame.SCALED
+        self.__SCREEN: pygame.Surface = pygame.display.set_mode(Frame.__screen_size, screen_flags)
+        self.__CLOCK: pygame.Clock = pygame.time.Clock()
+        self.__RENDER_GROUPS: list[pygame.sprite.Group] = []
+        self.__dt: float = 0
+        self.__acc_dt: float = 0
+        self.__fixed_steps: int = 0
+
+    @property
+    def dt(self) -> float:
+        return self.__dt
+
+    @classmethod
+    def FIXED_DT(cls) -> float:
+        return cls.__FIXED_DT
+
+    @property
+    def fixed_steps(self) -> int:
+        return self.__fixed_steps
+
+    @classmethod
+    def screen_size(cls) -> Vector2:
+        return Vector2(cls.__screen_size)
+
+    def next(self) -> None:
+        self.__dt = clamp(self.__CLOCK.tick(1000) / 1000, 0, Frame.__MAX_DT)
+        self.__acc_dt += self.__dt
+        self.__fixed_steps = floor(self.__acc_dt / Frame.__FIXED_DT)
+        self.__acc_dt -= Frame.__FIXED_DT * self.__fixed_steps
+
+    def render(self) -> None:
+        self.__SCREEN.fill("#333333")
+        for render_group in self.__RENDER_GROUPS:
+            render_group.draw(self.__SCREEN)
+        pygame.display.flip()
+
+    def add_sprite_group(self, group: pygame.sprite.Group) -> None:
+        if (group not in self.__RENDER_GROUPS):
+            self.__RENDER_GROUPS.append(group)
+
+    def remove_sprite_group(self, group: pygame.sprite.Group) -> None:
+        if (group in self.__RENDER_GROUPS):
+            self.__RENDER_GROUPS.remove(group)
+
+    def clear_sprite_group(self) -> None:
+        self.__RENDER_GROUPS.clear()
 
 class BasicSprite(pygame.sprite.Sprite):
     def __init__(self, sprite_path: str | None, transform: Transform) -> None:
@@ -33,8 +87,7 @@ class BasicSprite(pygame.sprite.Sprite):
         return self.pos + self.edge_offset
 
     def __set_center(self) -> None:
-        from Game import GAME
-        pos: Vector2 = round_vector2(vector2_mult(self.pos, GAME.screen_size()))
+        pos: Vector2 = round_vector2(vector2_mult(self.pos, Frame.screen_size()))
         self.rect = self.rect.move_to(center=pos)
 
     def _move_to(self, new_pos: Vector2) -> None:
@@ -45,8 +98,7 @@ class BasicSprite(pygame.sprite.Sprite):
         self._move_to(self.pos + offset)
 
     def __rescale(self) -> None:
-        from Game import GAME
-        size: Vector2 = round_vector2(vector2_mult(self.size, GAME.screen_size()))
+        size: Vector2 = round_vector2(vector2_mult(self.size, Frame.screen_size()))
         self.image = pygame.transform.scale(self.image, size)
         self.rect = self.image.get_rect()
         self.__set_center()
@@ -257,3 +309,4 @@ class PhysicsSystem:
                     dash.is_active = False
                 dash.left -= abs(self.__VELOCITY.x)
         return self.__VELOCITY
+

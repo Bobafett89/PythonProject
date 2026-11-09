@@ -45,3 +45,4 @@ def abs_vector2(vector: Vector2) -> Vector2:
 
 def round_vector2(vector: Vector2, digits: int = 0) -> Vector2:
     return Vector2(round(vector.x, digits), round(vector.y, digits))
+

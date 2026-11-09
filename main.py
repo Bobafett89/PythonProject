@@ -6,21 +6,22 @@ from Game import GAME
 from UI import UI_Screen
 from os import listdir
 from math import ceil
+from collections.abc import Callable
 
-def close_game() -> None:
-    GAME.set_command(Control.close_game())
+def close_game() -> Control:
+    return Control.close_game()
 
-def switch_to(screen: UI_Screen) -> function:
-    def change() -> None:
-        GAME.set_command(Control.switch_ui(screen))
+def switch_to(screen: UI_Screen) -> Callable[[], Control]:
+    def change() -> Control:
+        return Control.switch_ui(screen)
     return change
 
-def open_main_menu() -> None:
-    GAME.set_command(Control.open_menu())
+def open_main_menu() -> Control:
+    return Control.open_menu()
 
-def load_level(level_path: str) -> function:
-    def start_level() -> None:
-        GAME.set_command(Control.open_level(level_path))
+def load_level(level_path: str) -> Callable[[], Control]:
+    def start_level() -> Control:
+        return Control.open_level(level_path)
     return start_level
 
 def level_selection() -> UI_Screen:
@@ -64,8 +65,8 @@ def level_selection() -> UI_Screen:
                 pages[page].add_button("", Transform(button_size, back_pos), switch_to(pages[page-1]))
     return pages[0]
 
-def open_level_selection() -> None:
-    GAME.set_command(Control.switch_ui(level_selection()))
+def open_level_selection() -> Control:
+    return Control.switch_ui(level_selection())
 
 pygame.init()
 GAME.init()

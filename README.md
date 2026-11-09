@@ -41,46 +41,47 @@ config:
     hideEmptyMembersBox: true
 ---
 classDiagram
-	GAME *-- Frame
-	GAME *-- UI
-	GAME *-- Level
-	GAME ..> Control
-	UI *-- UIScreen
-	Level *-- Tilemap
-	Level *-- Character
-	Level *-- Finish
-	Level *-- Collectable
-	Level *-- MovingCollectable
-	Level ..> GAME
-	UIScreen *-- Button
-	UIScreen *-- Text
-	Text --|> BasicSprite
-	Text ..> GAME
-	Button --|> BasicSprite
-	Button ..> GAME
-	Character --|> BasicSprite
-	Character *-- Character_physics_controller
-	Character ..> Tilemap
-	Character ..> GAME
-	Character ..> dash_params
-	Character ..> jump_params
-	Tilemap *-- TilemapLayer
-	TilemapLayer ..> BasicSprite
+	GAME --* Frame
+	GAME --* UI
+	GAME --* Level
+	GAME --o Control
+	Level --* Tilemap
+	Level --* Player
+	Level --* Collectable
+	Level --* MovingCollectable
+	Level --* Finish
+	Level ..> Control
+	Player --|> BasicSprite
+	Player --* PhysicsSystem
+	Player ..> Tilemap
+	Player ..> Jump_params
+	Player ..> Dash_params
+	Player ..> Frame
+	Tilemap --* TilemapLayer
+	TilemapLayer --o BasicSprite
 	Finish --|> BasicSprite
-	Finish ..> GAME
 	Finish ..> BasicSprite
 	Collectable --|> BasicSprite
-	Collectable ..> Character
+	Collectable ..> BasicSprite
+	Collectable ..> Player_diff
 	MovingCollectable --|> Collectable
-	MovingCollectable ..> GAME
+	MovingCollectable ..> Frame
+	UI --* UIScreen
+	UIScreen --* Text
+	UIScreen --* Button
+	Text --|> BasicSprite
+	Text ..> Frame
+	Button --|> BasicSprite
+	Button ..> Control
+	Button ..> Frame
 	BasicSprite --|> pygame.sprite.Sprite
-	BasicSprite ..> GAME
-	Control ..> Command
-	Character_physics_controller ..> character_diff
-	Character_physics_controller ..> TilemapLayer
-	Character_physics_controller ..> BasicSprite
-	Character_physics_controller ..> jump_struct
-	Character_physics_controller ..> dash_struct
+	BasicSprite --* Transform
+	BasicSprite ..> Frame
+	Control --* Command
+	PhysicsSystem --* Jump_info
+	PhysicsSystem --* Dash_info
+	PhysicsSystem ..> BasicSprite
+	PhysicsSystem ..> TilemapLayer
 	class GAME {
 		-active: bool
 		-FRAME: Frame
@@ -88,51 +89,18 @@ classDiagram
 		-level: Level
 		-control: Control
 		+active() bool
-		+screen_size() Vector2
-		+dt() float
-		+FIXED_DT() float
-		+fixed_steps() int
 		+init() None
-		+start(start_menu: UI_Screen) None
+		+start(start_menu: UIScreen) None
 		+set_command(command: Control) None
 		+execute_command() None
 		+update() None
 		+next_frame() None
-		-start_levev_from_file(level_name: str) None
+		-start_level_from_file(level_name: str) None
 		-start_level(generator: Callable[[Level], None], tilemap_size: Vector2) None
 		-close_level() None
 		-reset_level() None
 		-open_main_menu() None
 		-close_game() None
-	}
-	class UI {
-		-start_menu: UI_Screen
-		-current_screen: UI_Screen
-		+/SPRITES: pygame.sprite.Group | None
-		+set_start_menu(start_menu: UI_Screen) None
-		+open_start_menu() None
-		+switch_ui(screen: UI_Screen) None
-		+clear_ui() None
-		+press_buttons() None
-	}
-	class Frame {
-		-FIXED_DT: float
-		-MAX_DT: float
-		-SCREEN: pygame.Surface
-		-CLOCK: pygame.Clock
-		-RENDER_GROUPS: list[pygame.sprite.Group]
-		-dt: float
-		-acc_dt: float
-		-fixed_steps: int
-		+/dt: float
-		+/FIXED_DT: float
-		+/fixed_steps: int
-		+/screen_size: Vector2
-		+next() None
-		+render() None
-		+add_sprite_group(group: pygame.sprite.Group) None
-		+remove_sprite_group(group: pygame.sprite.Group) None
-		+clear_sprite_group() None
 	}
 	class Level {
 		-DEF_LEVEL_SIZE: Vector2
@@ -142,40 +110,31 @@ classDiagram
 		-TILEMAP: Tilemap
 		-OBJECTS: list[type[BasicSprite]]
 		-COLLECTABLES: list[type[Collectable]]
-		-PLAYER: Character
+		-FINISHES: list[type[Finish]]
+		-PLAYER: Player
+		-command: Control
 		+/SPRITES: pygame.sprite.Group
 		+/TILEMAP_SPRITES: pygame.sprite.Group
 		+/TILEMAP_SIZE: Vector2
 		+/GENERATOR: Callable[[Level], None]
-		+parse_level(level_struct: dict) Callable[[Level], None]
+		+/command: Control
+		+parse_level(level_struct: dict[str, Any]) Callable[[Level], None]
 		-build_level() None
-		+logic() None
+		-set_command(command: Control) None
+		+logic(fixed_steps: int) None
 		+add_ground_tile(sprite_path: str, tile_pos: Vector2) None
 		+add_hazard_tile(sprite_path: str, tile_pos: Vector2) None
-		+add_character(sprite_path: str, size: Vector2, pos: Vector2, jump: jump_params, dash: dash_params) None
-		+add_finish(sprite_path: str, size: Vector2, pos: Vector2) None
-		+add_static_item(sprite_path: str, size: Vector2, pos: Vector2, diff: character_diff) None
-		+add_moving_item(sprite_path: str, size: Vector2, pos: Vector2, diff: character_diff, speed: float, destination: Vector2) None
+		+add_player(sprite_path: str, transform: Transform, jump: Jump_params, dash: Dash_params) None
+		+add_finish(sprite_path: str, transform: Transform) None
+		+add_static_item(sprite_path: str, transform: Transform, diff: Player_diff) None
+		+add_moving_item(sprite_path: str, transform: Transform, diff: Player_diff, speed: float, destination: Vector2) None
 		-collect_items() None
 	}
-	class UIScreen {
-		-SPRITES: pygame.sprite.Group
-		-BUTTONS: list[Button]
-		+/SPRITES: pygame.sprite.Group
-		+add_text(text: str, size: Vector2, pos: Vector2) None
-		+add_button(sprite_path: str, size: Vector2, pos: Vector2, callback: Callable[[], None]) None
-		+press_buttons() None
-	}
-	class Text {
-		-get_max_point_size(text: str, max_size: Vector2) int
-	}
-	class Button {
-		-CALLBACK: Callable[[], None]
-		+update() bool
-	}
-	class Character {
-		-PHYSICS: physics
+	class Player {
+		-PHYSICS: PhysicsSystem
 		-TILEMAP: Tilemap
+		-dead: bool
+		+/dead: bool
 		+update() None
 		+fixed_update() None
 		+death_check() None
@@ -185,7 +144,7 @@ classDiagram
 	class Tilemap {
 		-SIZE: Vector2
 		-SPRITES: pygame.sprite.Group
-		-LAYERS: dict[TilemapLayer]
+		-LAYERS: dict[str, TilemapLayer]
 		+/SIZE: Vector2
 		+/SPRITES: pygame.sprite.Group
 		+add_layer(name: str) None
@@ -206,13 +165,16 @@ classDiagram
 		+collides(object: type[BasicSprite], pseudo_tiles: bool) list[BasicSprite]
 	}
 	class Finish {
-		-CHAR: type[BasicSprite]
+		-PLAYER: type[BasicSprite]
+		-finished: bool
+		+/finished: bool
 		+fixed_update() None
 	}
 	class Collectable {
-		-DIFF: character_diff
+		-DIFF: Player_diff
 		-is_collected: bool
-		-CHAR: type[Character]
+		-PLAYER: type[BasicSprite]
+		+/DIFF: Player_diff
 		+/is_collected: bool
 		+fixed_update() None
 	}
@@ -224,9 +186,53 @@ classDiagram
 		-to_end: bool
 		+fixed_update() None
 	}
+	class UI {
+		-start_menu: UIScreen
+		-current_screen: UIScreen
+		+/SPRITES: pygame.sprite.Group | None
+		+set_start_menu(start_menu: UIScreen) None
+		+open_start_menu() None
+		+switch_ui(screen: UIScreen) None
+		+clear_ui() None
+		+press_buttons() Control
+	}
+	class UIScreen {
+		-SPRITES: pygame.sprite.Group
+		-BUTTONS: list[Button]
+		+/SPRITES: pygame.sprite.Group
+		+add_text(text: str, transform: Transform) None
+		+add_button(sprite_path: str, transform: Transform, callback: Callable[[], Control]) None
+		+press_buttons() Control | None
+	}
+	class Text {
+		-get_max_point_size(text: str, max_size: Vector2) int
+	}
+	class Button {
+		-CALLBACK: Callable[[], Control]
+		+update() Control | None
+	}
+	class Frame {
+		-FIXED_DT: float
+		-MAX_DT: float
+		-screen_size: tuple[int, int]
+		-SCREEN: pygame.Surface
+		-CLOCK: pygame.Clock
+		-RENDER_GROUPS: list[pygame.sprite.Group]
+		-dt: float
+		-acc_dt: float
+		-fixed_steps: int
+		+/dt: float
+		+FIXED_DT() float
+		+/fixed_steps: int
+		+screen_size() Vector2
+		+next() None
+		+render() None
+		+add_sprite_group(group: pygame.sprite.Group) None
+		+remove_sprite_group(group: pygame.sprite.Group) None
+		+clear_sprite_group() None
+	}
 	class BasicSprite {
-		-size: Vector2
-		-pos: Vector2
+		-transform: Transform
 		+/size: Vector2
 		+/pos: Vector2
 		+/edge_offset: Vector2
@@ -258,20 +264,25 @@ classDiagram
 		+parameter: Any
 		+wait() Control
 		+open_menu() Control
-		+switch_ui(screen: UI_Screen) Control
+		+switch_ui(screen: UIScreen) Control
 		+open_level(level_name: str) Control
 		+restart_level() Control
 		+close_level() Control
 		+close_game() Control
 	}
-	class jump_struct {
+	class Transform {
+		<<dataclass>>
+		+size: Vector2
+		+pos: Vector2
+	}
+	class Jump_info {
 		<<dataclass>>
 		+on_ground: bool
 		+force: int
 		+air_jumps: int
 		+def_air_jumps: int
 	}
-	class dash_struct {
+	class Dash_info {
 		<<dataclass>>
 		+is_active: bool
 		+speed: float
@@ -280,33 +291,33 @@ classDiagram
 		+count: int
 		+def_count: int
 	}
-	class character_diff {
+	class Player_diff {
 		<<dataclass>>
 		+air_jumps: int
 		+def_air_jumps: int
 		+dashes: int
 		+def_dashes: int
 	}
-	class jump_params {
+	class Jump_params {
 		<<dataclass>>
 		+dist: float
 		+height: float
 		+time: float
 	}
-	class dash_params {
+	class Dash_params {
 		<<dataclass>>
 		+dist: float
 		+time: float
 	}
-	class Character_physics_controller {
+	class PhysicsSystem {
 		-VELOCITY: Vector2
 		-GRAVITY: float
-		-JUMP: jump_struct
-		-DASH: dash_struct
+		-JUMP: Jump_info
+		-DASH: Dash_info
 		-SPEED: float
 		-dir: float
 		+/on_ground: bool
-		+apply_diff(diff: character_diff) None
+		+apply_diff(diff: Player_diff) None
 		+collide(obj: type[BasicSprite], ground: TilemapLayer) None
 		+apply_grav() None
 		+run(dir: float) None

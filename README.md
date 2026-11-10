@@ -64,8 +64,7 @@ classDiagram
 	Player ..> Jump_params
 	Player ..> Dash_params
 	Player ..|> Interpolatable
-	Tilemap --* TilemapLayer
-	TilemapLayer --o BasicSprite
+	Tilemap --o BasicSprite
 	Finish --|> BasicSprite
 	Finish ..> BasicSprite
 	Collectable --|> BasicSprite
@@ -87,7 +86,6 @@ classDiagram
 	PhysicsSystem --* Jump_info
 	PhysicsSystem --* Dash_info
 	PhysicsSystem ..> BasicSprite
-	PhysicsSystem ..> TilemapLayer
 	class GAME {
 		-active: bool
 		-FRAME: Frame
@@ -147,26 +145,18 @@ classDiagram
 	}
 	class Tilemap {
 		-SIZE: Vector2
+		-TILESIZE: Vector2
 		-SPRITES: pygame.sprite.Group
-		-LAYERS: dict[str, TilemapLayer]
+		-LAYERS: list[list[BasicSprite]]
 		+/SIZE: Vector2
 		+/SPRITES: pygame.sprite.Group
-		+add_layer(name: str) None
-		+get_layer(name: str) TilemapLayer
+		-convert_to_screen(pos: Vector2): Vector
+		-convert_to_tilemap(pos: Vector2): Vector
+		+add_layer(layer_name: str) None
+		+get_layer(layer_name: str, pseudo_border: bool) list[BasicSprite]
 		+add_tile(sprite_path: str, layer_name: str, tile_pos: Vector2) None
 		+get_tile(layer_name: str, tile_pos: Vector2, pseudo_tile: bool) BasicSprite | None
 		+collides(layer_name: str, object: type[BasicSprite], pseudo_tiles: bool) list[BasicSprite]
-	}
-	class TilemapLayer {
-		-SIZE: Vector2
-		-TILESIZE: Vector2
-		-SPRITES: pygame.sprite.Group
-		-MAP: list[list[BasicSprite]]
-		-convert_to_screen(pos: Vector2) Vector2
-		-convert_to_tilemap(pos: Vector2) Vector2
-		+add_tile(sprite_path: str, tile_pos: Vector2) None
-		+get_tile(tile_pos: Vector2, pseudo_tile: bool) BasicSprite | None
-		+collides(object: type[BasicSprite], pseudo_tiles: bool) list[BasicSprite]
 	}
 	class Finish {
 		-PLAYER: type[BasicSprite]

@@ -4,44 +4,44 @@ from enum import Enum, auto
 from Utils import vector2_mult, round_vector2, abs_vector2, direction, clamp
 from typing import Any
 from dataclasses import dataclass
+from abc import ABC, abstractmethod
 from os import path
 from math import floor
 
 class Frame:
     __FIXED_DT: float = 1 / 50
-    __MAX_DT: float = 1 / 30
+    __MAX_DT: float = 1 / 20
+    __MAX_FPS: int = 1000
     __screen_size: tuple[int, int] = (1920, 1080)
+    __dt: float  = 0
+    __fixed_steps: float = 0
 
     def __init__(self) -> None:
         screen_flags = pygame.FULLSCREEN | pygame.SCALED
         self.__SCREEN: pygame.Surface = pygame.display.set_mode(Frame.__screen_size, screen_flags)
         self.__CLOCK: pygame.Clock = pygame.time.Clock()
         self.__RENDER_GROUPS: list[pygame.sprite.Group] = []
-        self.__dt: float = 0
-        self.__acc_dt: float = 0
-        self.__fixed_steps: int = 0
 
-    @property
-    def dt(self) -> float:
-        return self.__dt
+    @classmethod
+    def dt(cls) -> float:
+        return cls.__dt
 
     @classmethod
     def FIXED_DT(cls) -> float:
         return cls.__FIXED_DT
 
-    @property
-    def fixed_steps(self) -> int:
-        return self.__fixed_steps
+    @classmethod
+    def fixed_steps(cls) -> int:
+        return cls.__fixed_steps
 
     @classmethod
     def screen_size(cls) -> Vector2:
         return Vector2(cls.__screen_size)
 
     def next(self) -> None:
-        self.__dt = clamp(self.__CLOCK.tick(1000) / 1000, 0, Frame.__MAX_DT)
-        self.__acc_dt += self.__dt
-        self.__fixed_steps = floor(self.__acc_dt / Frame.__FIXED_DT)
-        self.__acc_dt -= Frame.__FIXED_DT * self.__fixed_steps
+        Frame.__fixed_steps -= int(Frame.__fixed_steps)
+        Frame.__dt = clamp(self.__CLOCK.tick(Frame.__MAX_FPS) / 1000, 0, Frame.__MAX_DT)
+        Frame.__fixed_steps += Frame.__dt / Frame.__FIXED_DT
 
     def render(self) -> None:
         self.__SCREEN.fill("#333333")
@@ -86,13 +86,13 @@ class BasicSprite(pygame.sprite.Sprite):
     def botright(self) -> Vector2:
         return self.pos + self.edge_offset
 
-    def __set_center(self) -> None:
-        pos: Vector2 = round_vector2(vector2_mult(self.pos, Frame.screen_size()))
+    def _set_center(self, pos: Vector2) -> None:
+        pos: Vector2 = round_vector2(vector2_mult(pos, Frame.screen_size()))
         self.rect = self.rect.move_to(center=pos)
 
     def _move_to(self, new_pos: Vector2) -> None:
         self.__transform.pos = new_pos
-        self.__set_center()
+        self._set_center(self.pos)
 
     def _move_by(self, offset: Vector2) -> None:
         self._move_to(self.pos + offset)
@@ -101,7 +101,7 @@ class BasicSprite(pygame.sprite.Sprite):
         size: Vector2 = round_vector2(vector2_mult(self.size, Frame.screen_size()))
         self.image = pygame.transform.scale(self.image, size)
         self.rect = self.image.get_rect()
-        self.__set_center()
+        self._set_center(self.pos)
 
     def _set_size(self, new_size: Vector2) -> None:
         self.__transform.size = new_size
@@ -310,3 +310,19 @@ class PhysicsSystem:
                 dash.left -= abs(self.__VELOCITY.x)
         return self.__VELOCITY
 
+class InterpolationSystem:
+    def __init__(self, pos: Vector2) -> None:
+        self.__last_pos: Vector2 = pos
+
+    def update_last_pos(self, pos: Vector2) -> None:
+        self.__last_pos: Vector2 = pos
+
+    def interpolate_pos(self, pos: Vector2) -> Vector2:
+        step: Vector2 = pos - self.__last_pos
+        progress: float = Frame.fixed_steps() - int(Frame.fixed_steps())
+        return self.__last_pos + step * progress
+
+class Interpolatable(ABC):
+    @abstractmethod
+    def interpolate_sprite_pos(self) -> None:
+        pass

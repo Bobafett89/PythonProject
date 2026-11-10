@@ -1,8 +1,10 @@
 import pygame
 from pygame import Vector2
-from BasicObjects import BasicSprite, Player_diff, Control, Jump_params, Dash_params, Transform, PhysicsSystem, Frame
+from BasicObjects import BasicSprite, Player_diff, Control, Jump_params, Dash_params, Transform, PhysicsSystem, Frame, InterpolationSystem, Interpolatable
 from Utils import in_rect, direction, trunc_vector2, vector2_div, vector2_mult, Interval
 from math import ceil
+from collections.abc import Callable
+from typing import Any
 
 class Level:
     __DEF_LEVEL_SIZE: Vector2 = Vector2(16, 9)
@@ -14,6 +16,7 @@ class Level:
         self.__TILEMAP: Tilemap = Tilemap(tilemap_size)
         self.__OBJECTS: list[type[BasicSprite]] = []
         self.__COLLECTABLES: list[type[Collectable]] = []
+        self.__INTERPOLATED: list[Interpolatable] = []
         self.__FINISHES: list[type[Finish]] = []
         self.__PLAYER: Player = None
         self.__build_level()
@@ -249,6 +252,10 @@ class Level:
         if (self.__command == None):
             self.__command = command
 
+    def __interpolate_sprite_poses(self) -> None:
+        for object in self.__INTERPOLATED:
+            object.interpolate_sprite_pos()
+
     def logic(self, fixed_steps: int) -> None:
         for object in self.__OBJECTS:
             object.update()
@@ -257,12 +264,11 @@ class Level:
                 object.fixed_update()
             if (self.__PLAYER.dead):
                 self.__set_command(Control.restart_level())
-                break
             for finish in self.__FINISHES:
                 if (finish.finished):
                     self.__set_command(Control.close_level())
-                    break
         self.__collect_items()
+        self.__interpolate_sprite_poses()
 
     def add_ground_tile(self, sprite_path: str, tile_pos: Vector2) -> None:
         self.__TILEMAP.add_tile(sprite_path, "ground", tile_pos)
@@ -275,6 +281,7 @@ class Level:
             raise RuntimeError("More than one player can't be spawned")
         self.__PLAYER = Player(sprite_path, transform, jump, dash, self.__TILEMAP)
         self.__OBJECTS.append(self.__PLAYER)
+        self.__INTERPOLATED.append(self.__PLAYER)
         self.__SPRITES.add(self.__PLAYER)
 
     def add_finish(self, sprite_path: str, transform: Transform) -> None:
@@ -290,9 +297,10 @@ class Level:
         self.__SPRITES.add(collectable)
 
     def add_moving_item(self, sprite_path: str, transform: Transform, diff: Player_diff, speed: float, destination: Vector2) -> None:
-        collectable: Collectable = MovingCollectable(sprite_path, transform, diff, speed, destination, self.__PLAYER)
+        collectable: MovingCollectable = MovingCollectable(sprite_path, transform, diff, speed, destination, self.__PLAYER)
         self.__OBJECTS.append(collectable)
         self.__COLLECTABLES.append(collectable)
+        self.__INTERPOLATED.append(collectable)
         self.__SPRITES.add(collectable)
 
     def __collect_items(self) -> None:
@@ -303,7 +311,7 @@ class Level:
                 self.__COLLECTABLES.remove(object)
                 self.__SPRITES.remove(object)
 
-class Player(BasicSprite):
+class Player(BasicSprite, Interpolatable):
     def __init__(self, sprite_path: str, transform: Transform, jump: Jump_params, dash: Dash_params, tilemap: Tilemap) -> None:
         super().__init__(sprite_path, transform)
         jump_force: float = 2 * jump.height / jump.time * Frame.FIXED_DT()
@@ -313,11 +321,15 @@ class Player(BasicSprite):
 
         self.__PHYSICS: PhysicsSystem = PhysicsSystem(speed, jump_force, gravity, dash.dist, dash_speed)
         self.__TILEMAP: Tilemap = tilemap
+        self.__INTERPOLATOR: InterpolationSystem = InterpolationSystem(self.pos)
         self.__dead: bool = False
 
     @property
     def dead(self) -> bool:
         return self.__dead
+
+    def interpolate_sprite_pos(self) -> None:
+        self._set_center(self.__INTERPOLATOR.interpolate_pos(self.pos))
 
     def update(self) -> None:
         keys: list[bool] = pygame.key.get_pressed()
@@ -345,6 +357,7 @@ class Player(BasicSprite):
             self.__PHYSICS.jump()
 
         self.__PHYSICS.collide(self, self.__TILEMAP.get_layer("ground"))
+        self.__INTERPOLATOR.update_last_pos(self.pos)
         self._move_by(self.__PHYSICS.move())
         self.death_check()
 
@@ -478,14 +491,18 @@ class Collectable(BasicSprite):
         if (collide_with_player and not self.is_collected):
             self.__is_collected = True
 
-class MovingCollectable(Collectable):
+class MovingCollectable(Collectable, Interpolatable):
     def __init__(self, sprite_path: str | None, transform: Transform, diff: Player_diff, speed: float, destination: Vector2, player: type[BasicSprite]) -> None:
         super().__init__(sprite_path, transform, diff, player)
         self.__SPEED: float = speed * Frame.FIXED_DT()
         self.__START: Vector2 = self.pos.copy()
         self.__DESTINATION: Vector2 = destination
         self.__DIR: Vector2 = (self.__DESTINATION - self.__START).normalize()
+        self.__INTERPOLATOR: InterpolationSystem = InterpolationSystem(self.pos)
         self.__to_end: bool = True
+
+    def interpolate_sprite_pos(self) -> None:
+        self._set_center(self.__INTERPOLATOR.interpolate_pos(self.pos))
 
     def fixed_update(self) -> None:
         target: Vector2 = None
@@ -500,6 +517,7 @@ class MovingCollectable(Collectable):
         else:
             offset *= left
             self.__to_end = not self.__to_end
+        self.__INTERPOLATOR.update_last_pos(self.pos)
         self._move_by(offset)
         super().fixed_update()
 

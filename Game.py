@@ -66,7 +66,7 @@ class GAME:
         button_command: Control = cls.__UI.press_buttons()
         cls.set_command(button_command)
         if (cls.__level != None):
-            cls.__level.logic(cls.__FRAME.fixed_steps)
+            cls.__level.logic(int(Frame.fixed_steps()))
             cls.set_command(cls.__level.command)
 
     @classmethod

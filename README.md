@@ -26,7 +26,7 @@
 - [x] Добавить ограничение на delta_time
 - [x] Выделить компоненты (например, местоположение)
 - [x] Выделить системы
-- [ ] Добавить интерполяцию движения
+- [x] Добавить интерполяцию движения
 
 ## Модуль 5
 - [ ] Сделать FSM для GAME
@@ -37,6 +37,12 @@
 title: UML class diagram
 config:
   layout: elk
+  fontSize: 20
+  elk:
+    mergeEdges: false
+    nodePlacementStrategy: "LINEAR_SEGMENTS"
+    layeringStrategy: "COFFMAN_GRAHAM"
+    lineHops: false
   class:
     hideEmptyMembersBox: true
 ---
@@ -53,10 +59,12 @@ classDiagram
 	Level ..> Control
 	Player --|> BasicSprite
 	Player --* PhysicsSystem
+	Player --o InterpolationSystem
 	Player ..> Tilemap
 	Player ..> Jump_params
 	Player ..> Dash_params
 	Player ..> Frame
+	Player ..|> Interpolatable
 	Tilemap --* TilemapLayer
 	TilemapLayer --o BasicSprite
 	Finish --|> BasicSprite
@@ -65,7 +73,9 @@ classDiagram
 	Collectable ..> BasicSprite
 	Collectable ..> Player_diff
 	MovingCollectable --|> Collectable
+	MovingCollectable --o InterpolationSystem
 	MovingCollectable ..> Frame
+	MovingCollectable ..|> Interpolatable
 	UI --* UIScreen
 	UIScreen --* Text
 	UIScreen --* Button
@@ -133,13 +143,11 @@ classDiagram
 	class Player {
 		-PHYSICS: PhysicsSystem
 		-TILEMAP: Tilemap
+		-INTERPOLATOR: InterpolationSystem
 		-dead: bool
 		+/dead: bool
-		+update() None
-		+fixed_update() None
 		+death_check() None
 		+apply_diff(diff: chacracter_diff) None
-		-debug() None
 	}
 	class Tilemap {
 		-SIZE: Vector2
@@ -168,7 +176,6 @@ classDiagram
 		-PLAYER: type[BasicSprite]
 		-finished: bool
 		+/finished: bool
-		+fixed_update() None
 	}
 	class Collectable {
 		-DIFF: Player_diff
@@ -176,7 +183,6 @@ classDiagram
 		-PLAYER: type[BasicSprite]
 		+/DIFF: Player_diff
 		+/is_collected: bool
-		+fixed_update() None
 	}
 	class MovingCollectable {
 		-SPEED: float
@@ -184,7 +190,7 @@ classDiagram
 		-DESTINATION: Vector2
 		-DIR: Vector2
 		-to_end: bool
-		+fixed_update() None
+		-INTERPOLATOR: InterpolationSystem
 	}
 	class UI {
 		-start_menu: UIScreen
@@ -214,16 +220,16 @@ classDiagram
 	class Frame {
 		-FIXED_DT: float
 		-MAX_DT: float
+		-MAX_FPS: int
 		-screen_size: tuple[int, int]
 		-SCREEN: pygame.Surface
 		-CLOCK: pygame.Clock
 		-RENDER_GROUPS: list[pygame.sprite.Group]
 		-dt: float
-		-acc_dt: float
-		-fixed_steps: int
-		+/dt: float
+		-fixed_steps: float
+		+dt() float
 		+FIXED_DT() float
-		+/fixed_steps: int
+		+fixed_steps() float
 		+screen_size() Vector2
 		+next() None
 		+render() None
@@ -238,7 +244,7 @@ classDiagram
 		+/edge_offset: Vector2
 		+/topleft: Vector2
 		+/botright: Vector2
-		-set_center() None
+		#set_center(pos: Vector2) None
 		#move_to(new_pos: Vector2) None
 		#move_by(offset: Vector2) None
 		-rescale() None
@@ -324,5 +330,14 @@ classDiagram
 		+dash() None
 		+jump() None
 		+move() Vector2
+	}
+	class InterpolationSystem {
+		-last_pos: Vector2
+		+update_last_pos(pos: Vector2) None
+		+interpolate_pos(pos: Vector2) Vector2
+	}
+	class Interpolatable {
+		<<Interface>>
+		+interpolate_sprite_pos()
 	}
 ```

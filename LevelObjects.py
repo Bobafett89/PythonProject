@@ -1,6 +1,6 @@
 import pygame
 from pygame import Vector2
-from BasicObjects import BasicSprite, Player_diff, Control, Jump_params, Dash_params, Transform, PhysicsSystem, Frame, InterpolationSystem, Interpolatable
+from BasicObjects import BasicSprite, Player_diff, Control, Jump_params, Dash_params, Transform, PhysicsSystem, InterpolationSystem, Interpolatable
 from Utils import in_rect, direction, trunc_vector2, vector2_div, vector2_mult, Interval
 from math import ceil
 from collections.abc import Callable
@@ -314,10 +314,10 @@ class Level:
 class Player(BasicSprite, Interpolatable):
     def __init__(self, sprite_path: str, transform: Transform, jump: Jump_params, dash: Dash_params, tilemap: Tilemap) -> None:
         super().__init__(sprite_path, transform)
-        jump_force: float = 2 * jump.height / jump.time * Frame.FIXED_DT()
-        gravity: float = jump_force / jump.time * Frame.FIXED_DT()
-        speed: float = jump.dist / (2 * jump.time) * Frame.FIXED_DT()
-        dash_speed: float = dash.dist / dash.time * Frame.FIXED_DT()
+        jump_force: float = 2 * jump.height / jump.time * self.FIXED_DT
+        gravity: float = jump_force / jump.time * self.FIXED_DT
+        speed: float = jump.dist / (2 * jump.time) * self.FIXED_DT
+        dash_speed: float = dash.dist / dash.time * self.FIXED_DT
 
         self.__PHYSICS: PhysicsSystem = PhysicsSystem(speed, jump_force, gravity, dash.dist, dash_speed)
         self.__TILEMAP: Tilemap = tilemap
@@ -494,7 +494,7 @@ class Collectable(BasicSprite):
 class MovingCollectable(Collectable, Interpolatable):
     def __init__(self, sprite_path: str | None, transform: Transform, diff: Player_diff, speed: float, destination: Vector2, player: type[BasicSprite]) -> None:
         super().__init__(sprite_path, transform, diff, player)
-        self.__SPEED: float = speed * Frame.FIXED_DT()
+        self.__SPEED: float = speed * self.FIXED_DT
         self.__START: Vector2 = self.pos.copy()
         self.__DESTINATION: Vector2 = destination
         self.__DIR: Vector2 = (self.__DESTINATION - self.__START).normalize()

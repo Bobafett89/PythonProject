@@ -63,7 +63,6 @@ classDiagram
 	Player ..> Tilemap
 	Player ..> Jump_params
 	Player ..> Dash_params
-	Player ..> Frame
 	Player ..|> Interpolatable
 	Tilemap --* TilemapLayer
 	TilemapLayer --o BasicSprite
@@ -74,16 +73,13 @@ classDiagram
 	Collectable ..> Player_diff
 	MovingCollectable --|> Collectable
 	MovingCollectable --o InterpolationSystem
-	MovingCollectable ..> Frame
 	MovingCollectable ..|> Interpolatable
 	UI --* UIScreen
 	UIScreen --* Text
 	UIScreen --* Button
 	Text --|> BasicSprite
-	Text ..> Frame
 	Button --|> BasicSprite
 	Button ..> Control
-	Button ..> Frame
 	BasicSprite --|> pygame.sprite.Sprite
 	BasicSprite --* Transform
 	BasicSprite ..> Frame
@@ -244,6 +240,8 @@ classDiagram
 		+/edge_offset: Vector2
 		+/topleft: Vector2
 		+/botright: Vector2
+		+/screen_size: Vector2
+		+/FIXED_DT: float
 		#set_center(pos: Vector2) None
 		#move_to(new_pos: Vector2) None
 		#move_by(offset: Vector2) None

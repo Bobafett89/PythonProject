@@ -1,6 +1,6 @@
 import pygame
 from pygame import Vector2
-from BasicObjects import BasicSprite, Transform, Frame, Control
+from BasicObjects import BasicSprite, Transform, Control
 from Utils import in_rect, vector2_div, vector2_mult, round_vector2, Interval
 from collections.abc import Callable
 
@@ -68,13 +68,13 @@ class Text(BasicSprite):
         super().__init__(None, transform)
         font: pygame.font.Font = pygame.font.Font(size = self.__get_max_point_size(text, transform.size))
         font.align = pygame.FONT_CENTER
-        img: pygame.Surface = font.render(text, True, "white", wraplength = round(transform.size.x * Frame.screen_size().x))
-        text_size: Vector2 = vector2_div(Vector2(img.size), Frame.screen_size())
+        img: pygame.Surface = font.render(text, True, "white", wraplength = round(transform.size.x * self.screen_size.x))
+        text_size: Vector2 = vector2_div(Vector2(img.size), self.screen_size)
         self._set_size(text_size)
         self._set_image(img)
 
     def __get_max_point_size(self, text: str, max_size: Vector2) -> int:
-        pixel_size: Vector2 = round_vector2(vector2_mult(max_size, Frame.screen_size()))
+        pixel_size: Vector2 = round_vector2(vector2_mult(max_size, self.screen_size))
         point_size: int = 1
         fit: bool = True
         while fit:
@@ -96,7 +96,7 @@ class Button(BasicSprite):
 
     def update(self) -> Control | None:
         command: Control = None
-        cursor_pos: Vector2 = vector2_div(Vector2(pygame.mouse.get_pos()), Frame.screen_size())
+        cursor_pos: Vector2 = vector2_div(Vector2(pygame.mouse.get_pos()), self.screen_size)
         new_keys: list[bool] = pygame.mouse.get_just_pressed()
         if (new_keys[0] and in_rect(cursor_pos, self.topleft, self.botright, Interval.CLOSED)):
             command = self.__CALLBACK()

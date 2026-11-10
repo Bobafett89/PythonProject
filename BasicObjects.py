@@ -86,6 +86,14 @@ class BasicSprite(pygame.sprite.Sprite):
     def botright(self) -> Vector2:
         return self.pos + self.edge_offset
 
+    @property
+    def screen_size(self) -> Vector2:
+        return Frame.screen_size()
+
+    @property
+    def FIXED_DT(sefl) -> float:
+        return Frame.FIXED_DT()
+
     def _set_center(self, pos: Vector2) -> None:
         pos: Vector2 = round_vector2(vector2_mult(pos, Frame.screen_size()))
         self.rect = self.rect.move_to(center=pos)

@@ -22,9 +22,9 @@ class Level:
         self.__GENERATOR: Callable[[Level], None] = generator
         self.__TILEMAP: Tilemap = Tilemap(tilemap_size, self.__SPRITES)
         self.__OBJECTS: list[type[BasicSprite]] = []
-        self.__COLLECTABLES: list[type[Collectable]] = []
+        self.__POWER_UPS: list[type[PowerUp]] = []
         self.__INTERPOLATED: list[Interpolatable] = []
-        self.__FINISHES: list[type[Finish]] = []
+        self.__FINISHES: list[type[Collectable]] = []
         self.__PLAYER: Player = None
         self.__state: LevelState = LevelState.BUILDING
         self.__build_level()
@@ -239,10 +239,10 @@ class Level:
         self.__set_state(LevelState.BUILDING)
         self.__SPRITES.empty()
         self.__TILEMAP = Tilemap(self.__TILEMAP.SIZE, self.__SPRITES)
-        self.__OBJECTS = []
-        self.__COLLECTABLES = []
-        self.__INTERPOLATED = []
-        self.__FINISHES = []
+        self.__OBJECTS.clear()
+        self.__POWER_UPS.clear()
+        self.__INTERPOLATED.clear()
+        self.__FINISHES.clear()
         self.__PLAYER = None
         self.__build_level()
 
@@ -282,7 +282,7 @@ class Level:
                     if (self.__PLAYER.dead):
                         self.__set_state(LevelState.RESETTING)
                     for finish in self.__FINISHES:
-                        if (finish.finished):
+                        if (finish.is_collected):
                             self.__set_state(LevelState.FINISHED)
                 self.__collect_items()
                 self.__interpolate_sprite_poses()
@@ -304,30 +304,30 @@ class Level:
         self.__SPRITES.add(self.__PLAYER)
 
     def add_finish(self, sprite_path: str, transform: Transform) -> None:
-        finish = Finish(sprite_path, transform, self.__PLAYER)
+        finish: Collectable = Collectable(sprite_path, transform, self.__PLAYER)
         self.__OBJECTS.append(finish)
         self.__FINISHES.append(finish)
         self.__SPRITES.add(finish)
 
     def add_static_item(self, sprite_path: str, transform: Transform, diff: Player_diff) -> None:
-        collectable: Collectable = Collectable(sprite_path, transform, diff, self.__PLAYER)
-        self.__OBJECTS.append(collectable)
-        self.__COLLECTABLES.append(collectable)
-        self.__SPRITES.add(collectable)
+        power_up: PowerUp = PowerUp(sprite_path, transform, self.__PLAYER, diff)
+        self.__OBJECTS.append(power_up)
+        self.__POWER_UPS.append(power_up)
+        self.__SPRITES.add(power_up)
 
     def add_moving_item(self, sprite_path: str, transform: Transform, diff: Player_diff, speed: float, destination: Vector2) -> None:
-        collectable: MovingCollectable = MovingCollectable(sprite_path, transform, diff, speed, destination, self.__PLAYER)
-        self.__OBJECTS.append(collectable)
-        self.__COLLECTABLES.append(collectable)
-        self.__INTERPOLATED.append(collectable)
-        self.__SPRITES.add(collectable)
+        power_up: MovingPowerUp = MovingPowerUp(sprite_path, transform, self.__PLAYER, diff, speed, destination)
+        self.__OBJECTS.append(power_up)
+        self.__POWER_UPS.append(power_up)
+        self.__INTERPOLATED.append(power_up)
+        self.__SPRITES.add(power_up)
 
     def __collect_items(self) -> None:
-        for object in self.__COLLECTABLES:
+        for object in self.__POWER_UPS:
             if (object.is_collected):
                 self.__PLAYER.apply_diff(object.DIFF)
                 self.__OBJECTS.remove(object)
-                self.__COLLECTABLES.remove(object)
+                self.__POWER_UPS.remove(object)
                 self.__SPRITES.remove(object)
 
 class Player(BasicSprite, Interpolatable):
@@ -468,43 +468,35 @@ class Tilemap:
                     collisions.append(tile)
         return collisions
 
-class Finish(BasicSprite):
+class Collectable(BasicSprite):
     def __init__(self, sprite_path: str | None, transform: Transform, player: type[BasicSprite]) -> None:
         super().__init__(sprite_path, transform)
-        self.__PLAYER: type[BasicSprite] = player
-        self.__finished: bool = False
-
-    @property
-    def finished(self) -> bool:
-        return self.__finished
-
-    def fixed_update(self) -> None:
-        if (self.overlap(self.__PLAYER)):
-            self.__finished = True
-
-class Collectable(BasicSprite):
-    def __init__(self, sprite_path: str | None, transform: Transform, diff: Player_diff, player: type[BasicSprite]) -> None:
-        super().__init__(sprite_path, transform)
-        self.__DIFF: Player_diff = diff
         self.__is_collected: bool = False
         self.__PLAYER: type[BasicSprite] = player
+
+    @property
+    def is_collected(self) -> None:
+        return self.__is_collected
+
+    def _collect(self) -> None:
+        if (self.overlap(self.__PLAYER)):
+            self.__is_collected = True
+
+    def fixed_update(self) -> None:
+        self._collect()
+
+class PowerUp(Collectable):
+    def __init__(self, sprite_path: str | None, transform: Transform, player: type[BasicSprite], diff: Player_diff) -> None:
+        super().__init__(sprite_path, transform, player)
+        self.__DIFF: Player_diff = diff
 
     @property
     def DIFF(self) -> Player_diff:
         return self.__DIFF
 
-    @property
-    def is_collected(self) -> bool:
-        return self.__is_collected
-
-    def fixed_update(self) -> None:
-        collide_with_player: bool = self.overlap(self.__PLAYER)
-        if (collide_with_player and not self.is_collected):
-            self.__is_collected = True
-
-class MovingCollectable(Collectable, Interpolatable):
-    def __init__(self, sprite_path: str | None, transform: Transform, diff: Player_diff, speed: float, destination: Vector2, player: type[BasicSprite]) -> None:
-        super().__init__(sprite_path, transform, diff, player)
+class MovingPowerUp(PowerUp, Interpolatable):
+    def __init__(self, sprite_path: str | None, transform: Transform, player: type[BasicSprite], diff: Player_diff, speed: float, destination: Vector2) -> None:
+        super().__init__(sprite_path, transform, player, diff)
         self.__SPEED: float = speed * self.FIXED_DT
         self.__START: Vector2 = self.pos.copy()
         self.__DESTINATION: Vector2 = destination

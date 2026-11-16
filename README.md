@@ -51,20 +51,20 @@ classDiagram
 	Game --o Control
 	Level --* Tilemap
 	Level --* Player
+	Level --* PowerUp
+	Level --* MovingPowerUp
 	Level --* Collectable
-	Level --* MovingCollectable
-	Level --* Finish
 	Player --|> BasicSprite
 	Player --* PhysicsSystem
 	Player --o InterpolationSystem
 	Player ..> Tilemap
 	Player ..|> Interpolatable
 	Tilemap --o BasicSprite
-	Finish --|> BasicSprite
 	Collectable --|> BasicSprite
-	MovingCollectable --|> Collectable
-	MovingCollectable --o InterpolationSystem
-	MovingCollectable ..|> Interpolatable
+	PowerUp --|> Collectable
+	MovingPowerUp --|> PowerUp
+	MovingPowerUp --o InterpolationSystem
+	MovingPowerUp ..|> Interpolatable
 	UI --* UIScreen
 	UIScreen --* Text
 	UIScreen --* Button
@@ -98,7 +98,7 @@ classDiagram
 		-GENERATOR
 		-TILEMAP
 		-OBJECTS
-		-COLLECTABLES
+		-POWER_UPS
 		-FINISHES
 		-PLAYER
 		+state
@@ -136,16 +136,15 @@ classDiagram
 		+get_tile()
 		+collides()
 	}
-	class Finish {
-		-PLAYER
-		+finished
-	}
 	class Collectable {
-		+DIFF
-		+is_collected
 		-PLAYER
+		+is_collected
+		#collect()
 	}
-	class MovingCollectable {
+	class PowerUp {
+		+DIFF
+	}
+	class MovingPowerUp {
 		-SPEED
 		-START
 		-DESTINATION
@@ -270,9 +269,9 @@ classDiagram
 	Game --o Control
 	Level --* Tilemap
 	Level --* Player
+	Level --* PowerUp
+	Level --* MovingPowerUp
 	Level --* Collectable
-	Level --* MovingCollectable
-	Level --* Finish
 	Level --* LevelState
 	Player --|> BasicSprite
 	Player --* PhysicsSystem
@@ -282,11 +281,11 @@ classDiagram
 	Player ..> Dash_params
 	Player ..|> Interpolatable
 	Tilemap --o BasicSprite
-	Finish --|> BasicSprite
-	Collectable --|> BasicSprite
-	MovingCollectable --|> Collectable
-	MovingCollectable --o InterpolationSystem
-	MovingCollectable ..|> Interpolatable
+	Collectable--|> BasicSprite
+	PowerUp --|> Collectable
+	MovingPowerUp --|> PowerUp
+	MovingPowerUp --o InterpolationSystem
+	MovingPowerUp ..|> Interpolatable
 	UI --* UIScreen
 	UIScreen --* Text
 	UIScreen --* Button
@@ -332,8 +331,8 @@ classDiagram
 		-GENERATOR: Callable[[Level], None]
 		-TILEMAP: Tilemap
 		-OBJECTS: list[type[BasicSprite]]
-		-COLLECTABLES: list[type[Collectable]]
-		-FINISHES: list[type[Finish]]
+		-POWER_UPS: list[type[PowerUp]]
+		-FINISHES: list[type[Collectable]]
 		-PLAYER: Player
 		+state: LevelState
 		+parse_level(level_struct: dict[str, Any]) Callable[[Level], None]
@@ -370,16 +369,15 @@ classDiagram
 		+get_tile(layer_name: str, tile_pos: Vector2, pseudo_tile: bool) BasicSprite | None
 		+collides(layer_name: str, object: type[BasicSprite], pseudo_tiles: bool) list[BasicSprite]
 	}
-	class Finish {
-		-PLAYER: type[BasicSprite]
-		+finished: bool
-	}
 	class Collectable {
-		+DIFF: Player_diff
-		+is_collected: bool
 		-PLAYER: type[BasicSprite]
+		+is_collected: bool
+		#collect() None
 	}
-	class MovingCollectable {
+	class PowerUp {
+		+DIFF: Player_diff
+	}
+	class MovingPowerUp {
 		-SPEED: float
 		-START: Vector2
 		-DESTINATION: Vector2

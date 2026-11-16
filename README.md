@@ -45,10 +45,10 @@ config:
     hideEmptyMembersBox: true
 ---
 classDiagram
-	GAME --* Frame
-	GAME --* UI
-	GAME --* Level
-	GAME --o Control
+	Game --* Frame
+	Game --* UI
+	Game --* Level
+	Game --o Control
 	Level --* Tilemap
 	Level --* Player
 	Level --* Collectable
@@ -297,10 +297,10 @@ config:
     hideEmptyMembersBox: true
 ---
 classDiagram
-	GAME --* Frame
-	GAME --* UI
-	GAME --* Level
-	GAME --o Control
+	Game --* Frame
+	Game --* UI
+	Game --* Level
+	Game --o Control
 	Level --* Tilemap
 	Level --* Player
 	Level --* Collectable

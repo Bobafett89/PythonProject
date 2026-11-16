@@ -53,8 +53,6 @@ class GAME:
                     cls.__start_level_from_file(cls.__control.parameter)
                 except RuntimeError:
                     pass
-            case Command.RESTART_LEVEL:
-                cls.__reset_level()
             case Command.CLOSE_LEVEL:
                 cls.__close_level()
             case Command.CLOSE_GAME:
@@ -67,11 +65,8 @@ class GAME:
         cls.set_command(button_command)
         if (cls.__level != None):
             cls.__level.logic(int(Frame.fixed_steps()))
-            match (cls.__level.state):
-                case LevelState.RESETTING:
-                    cls.set_command(Control.restart_level())
-                case LevelState.FINISHED:
-                    cls.set_command(Control.close_level())
+            if (cls.__level.state):
+                cls.set_command(Control.close_level())
 
     @classmethod
     def next_frame(cls) -> None:
@@ -111,11 +106,6 @@ class GAME:
     def __close_level(cls) -> None:
         cls.__level = None
         cls.__open_main_menu()
-
-    @classmethod
-    def __reset_level(cls) -> None:
-        level = cls.__level
-        cls.__start_level(level.GENERATOR, level.TILEMAP_SIZE)
 
     @classmethod
     def __open_main_menu(cls) -> None:

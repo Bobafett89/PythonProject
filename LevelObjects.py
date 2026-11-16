@@ -243,6 +243,17 @@ class Level:
 
         return generator
 
+    def __reset_level(self) -> None:
+        self.__set_state(LevelState.BUILDING)
+        self.__SPRITES.empty()
+        self.__TILEMAP = Tilemap(self.TILEMAP_SIZE, self.__SPRITES)
+        self.__OBJECTS = []
+        self.__COLLECTABLES = []
+        self.__INTERPOLATED = []
+        self.__FINISHES = []
+        self.__PLAYER = None
+        self.__build_level()
+
     def __build_level(self) -> None:
         for name in Level.__DEF_TILEMAP_LAYERS:
             self.__TILEMAP.add_layer(name)
@@ -269,18 +280,22 @@ class Level:
             object.interpolate_sprite_pos()
 
     def logic(self, fixed_steps: int) -> None:
-        for object in self.__OBJECTS:
-            object.update()
-        for i in range(fixed_steps):
-            for object in self.__OBJECTS:
-                object.fixed_update()
-            if (self.__PLAYER.dead):
-                self.__set_state(LevelState.RESETTING)
-            for finish in self.__FINISHES:
-                if (finish.finished):
-                    self.__set_state(LevelState.FINISHED)
-        self.__collect_items()
-        self.__interpolate_sprite_poses()
+        match (self.__state):
+            case LevelState.RUNNING:
+                for object in self.__OBJECTS:
+                    object.update()
+                for i in range(fixed_steps):
+                    for object in self.__OBJECTS:
+                        object.fixed_update()
+                    if (self.__PLAYER.dead):
+                        self.__set_state(LevelState.RESETTING)
+                    for finish in self.__FINISHES:
+                        if (finish.finished):
+                            self.__set_state(LevelState.FINISHED)
+                self.__collect_items()
+                self.__interpolate_sprite_poses()
+            case LevelState.RESETTING:
+                self.__reset_level()
 
     def add_ground_tile(self, sprite_path: str, tile_pos: Vector2) -> None:
         self.__TILEMAP.add_tile(sprite_path, "ground", tile_pos)

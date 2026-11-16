@@ -92,7 +92,6 @@ classDiagram
 		-start_level_from_file() None
 		-start_level() None
 		-close_level() None
-		-reset_level() None
 		-open_main_menu() None
 		-close_game() None
 	}
@@ -120,6 +119,7 @@ classDiagram
 		+/GENERATOR: Callable[[Level], None]
 		+/state: LevelState
 		+parse_level() Callable[[Level], None]
+		-reset_level() None
 		-build_level() None
 		-set_state() None
 		+logic() None
@@ -246,7 +246,6 @@ classDiagram
 		OPEN_MENU
 		SWITCH_UI
 		OPEN_LEVEL
-		RESTART_LEVEL
 		CLOSE_LEVEL
 		CLOSE_GAME
 	}
@@ -257,7 +256,6 @@ classDiagram
 		+open_menu() Control
 		+switch_ui() Control
 		+open_level() Control
-		+restart_level() Control
 		+close_level() Control
 		+close_game() Control
 	}
@@ -353,7 +351,6 @@ classDiagram
 		-start_level_from_file(level_name: str) None
 		-start_level(generator: Callable[[Level], None], tilemap_size: Vector2) None
 		-close_level() None
-		-reset_level() None
 		-open_main_menu() None
 		-close_game() None
 	}
@@ -381,6 +378,7 @@ classDiagram
 		+/GENERATOR: Callable[[Level], None]
 		+/state: LevelState
 		+parse_level(level_struct: dict[str, Any]) Callable[[Level], None]
+		-reset_level() None
 		-build_level() None
 		-set_state(new_state: LevelState) None
 		+logic(fixed_steps: int) None
@@ -507,7 +505,6 @@ classDiagram
 		OPEN_MENU
 		SWITCH_UI
 		OPEN_LEVEL
-		RESTART_LEVEL
 		CLOSE_LEVEL
 		CLOSE_GAME
 	}
@@ -518,7 +515,6 @@ classDiagram
 		+open_menu() Control
 		+switch_ui(screen: UIScreen) Control
 		+open_level(level_name: str) Control
-		+restart_level() Control
 		+close_level() Control
 		+close_game() Control
 	}

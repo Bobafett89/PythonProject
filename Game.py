@@ -106,7 +106,6 @@ class GAME:
         cls.__UI.clear_ui()
         cls.__FRAME.clear_sprite_group()
         cls.__FRAME.add_sprite_group(cls.__level.SPRITES)
-        cls.__FRAME.add_sprite_group(cls.__level.TILEMAP_SPRITES)
 
     @classmethod
     def __close_level(cls) -> None:

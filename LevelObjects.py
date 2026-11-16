@@ -20,7 +20,7 @@ class Level:
     def __init__(self, generator: Callable[[Level], None], tilemap_size: Vector2) -> None:
         self.__SPRITES: pygame.sprite.Group = pygame.sprite.Group()
         self.__GENERATOR: Callable[[Level], None] = generator
-        self.__TILEMAP: Tilemap = Tilemap(tilemap_size)
+        self.__TILEMAP: Tilemap = Tilemap(tilemap_size, self.__SPRITES)
         self.__OBJECTS: list[type[BasicSprite]] = []
         self.__COLLECTABLES: list[type[Collectable]] = []
         self.__INTERPOLATED: list[Interpolatable] = []
@@ -32,10 +32,6 @@ class Level:
     @property
     def SPRITES(self) -> pygame.sprite.Group:
         return self.__SPRITES
-
-    @property
-    def TILEMAP_SPRITES(self) -> pygame.sprite.Group:
-        return self.__TILEMAP.SPRITES
 
     @property
     def TILEMAP_SIZE(self) -> Vector2:
@@ -398,10 +394,10 @@ class Player(BasicSprite, Interpolatable):
             self.__PHYSICS._PhysicsSystem__DASH.def_count += 1
 
 class Tilemap:
-    def __init__(self, size: Vector2) -> None:
+    def __init__(self, size: Vector2, sprite_group: pygame.sprite.Group) -> None:
         self.__SIZE: Vector2 = size
         self.__TILESIZE: Vector2 = vector2_div(Vector2(1, 1), self.__SIZE)
-        self.__SPRITES: pygame.sprite.Group = pygame.sprite.Group()
+        self.__SPRITES: pygame.sprite.Group = sprite_group
         self.__LAYERS: dict[str, list[list[BasicSprite]]] = dict()
 
     @property

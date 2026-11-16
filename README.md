@@ -54,7 +54,6 @@ classDiagram
 	Level --* Collectable
 	Level --* MovingCollectable
 	Level --* Finish
-	Level --* LevelState
 	Player --|> BasicSprite
 	Player --* PhysicsSystem
 	Player --o InterpolationSystem
@@ -74,210 +73,178 @@ classDiagram
 	Button ..> Control
 	BasicSprite --|> pygame.sprite.Sprite
 	BasicSprite ..> Frame
-	Control --* Command
 	PhysicsSystem ..> BasicSprite
 	class Game {
-		-active: bool
-		-FRAME: Frame
-		-UI: UI
-		-level: Level
-		-control: Control
-		+/active: bool
-		+start() None
-		+set_command() None
-		+execute_command() None
-		+update() None
-		+next_frame() None
-		-start_level_from_file() None
-		-start_level() None
-		-close_level() None
-		-open_main_menu() None
-		-close_game() None
-	}
-	class LevelState {
-		<<enum>>
-		BUILDING
-		RUNNING
-		RESETTING
-		FINISHED
+		+active
+		-FRAME
+		-UI
+		-level
+		-control
+		+start()
+		+set_command()
+		+execute_command()
+		+update()
+		+next_frame()
+		-start_level_from_file()
+		-start_level()
+		-close_level()
+		-open_main_menu()
+		-close_game()
 	}
 	class Level {
-		-DEF_LEVEL_SIZE: Vector2
-		-DEF_TILEMAP_LAYERS: list[str]
-		-SPRITES: pygame.sprite.Group
-		-GENERATOR: Callable[[Level], None]
-		-TILEMAP: Tilemap
-		-OBJECTS: list[type[BasicSprite]]
-		-COLLECTABLES: list[type[Collectable]]
-		-FINISHES: list[type[Finish]]
-		-PLAYER: Player
-		-state: LevelState
-		+/SPRITES: pygame.sprite.Group
-		+/TILEMAP_SPRITES: pygame.sprite.Group
-		+/TILEMAP_SIZE: Vector2
-		+/GENERATOR: Callable[[Level], None]
-		+/state: LevelState
-		+parse_level() Callable[[Level], None]
-		-reset_level() None
-		-build_level() None
-		-set_state() None
-		+logic() None
-		+add_ground_tile() None
-		+add_hazard_tile() None
-		+add_player() None
-		+add_finish() None
-		+add_static_item() None
-		+add_moving_item() None
-		-collect_items() None
+		-DEF_LEVEL_SIZE
+		-DEF_TILEMAP_LAYERS
+		+SPRITES
+		-GENERATOR
+		-TILEMAP
+		-OBJECTS
+		-COLLECTABLES
+		-FINISHES
+		-PLAYER
+		+state
+		+parse_level()
+		-reset_level()
+		-build_level()
+		-set_state()
+		+logic()
+		+add_ground_tile()
+		+add_hazard_tile()
+		+add_player()
+		+add_finish()
+		+add_static_item()
+		+add_moving_item()
+		-collect_items()
 	}
 	class Player {
-		-PHYSICS: PhysicsSystem
-		-TILEMAP: Tilemap
-		-INTERPOLATOR: InterpolationSystem
-		-dead: bool
-		+/dead: bool
-		+death_check() None
-		+apply_diff() None
+		-PHYSICS
+		-TILEMAP
+		-INTERPOLATOR
+		+dead
+		+death_check()
+		+apply_diff()
 	}
 	class Tilemap {
-		-SIZE: Vector2
-		-TILESIZE: Vector2
-		-SPRITES: pygame.sprite.Group
-		-LAYERS: list[list[BasicSprite]]
-		+/SIZE: Vector2
-		+/SPRITES: pygame.sprite.Group
-		-convert_to_screen(): Vector
-		-convert_to_tilemap(): Vector
-		+add_layer() None
-		+get_layer() list[BasicSprite]
-		+add_tile() None
-		+get_tile() BasicSprite | None
-		+collides() list[BasicSprite]
+		+SIZE
+		-TILESIZE
+		-SPRITES
+		-LAYERS
+		-convert_to_screen()
+		-convert_to_tilemap()
+		+add_layer()
+		+get_layer()
+		+add_tile()
+		+get_tile()
+		+collides()
 	}
 	class Finish {
-		-PLAYER: type[BasicSprite]
-		-finished: bool
-		+/finished: bool
+		-PLAYER
+		+finished
 	}
 	class Collectable {
-		-DIFF: Player_diff
-		-is_collected: bool
-		-PLAYER: type[BasicSprite]
-		+/DIFF: Player_diff
-		+/is_collected: bool
+		+DIFF
+		+is_collected
+		-PLAYER
 	}
 	class MovingCollectable {
-		-SPEED: float
-		-START: Vector2
-		-DESTINATION: Vector2
-		-DIR: Vector2
-		-to_end: bool
-		-INTERPOLATOR: InterpolationSystem
+		-SPEED
+		-START
+		-DESTINATION
+		-DIR
+		-to_end
+		-INTERPOLATOR
 	}
 	class UI {
-		-start_menu: UIScreen
-		-current_screen: UIScreen
-		+/SPRITES: pygame.sprite.Group | None
-		+set_start_menu() None
-		+open_start_menu() None
-		+switch_ui() None
-		+clear_ui() None
-		+press_buttons() Control
+		-start_menu
+		-current_screen
+		+SPRITES
+		+set_start_menu()
+		+open_start_menu()
+		+switch_ui()
+		+clear_ui()
+		+press_buttons()
 	}
 	class UIScreen {
-		-SPRITES: pygame.sprite.Group
-		-BUTTONS: list[Button]
-		+/SPRITES: pygame.sprite.Group
-		+add_text() None
-		+add_button() None
-		+press_buttons() Control | None
+		+SPRITES
+		-BUTTONS
+		+add_text()
+		+add_button()
+		+press_buttons()
 	}
 	class Text {
-		-get_max_point_size() int
+		-get_max_point_size()
 	}
 	class Button {
-		-CALLBACK: Callable[[], Control]
-		+update() Control | None
+		-CALLBACK
+		+update()
 	}
 	class Frame {
-		-FIXED_DT: float
-		-MAX_DT: float
-		-MAX_FPS: int
-		-screen_size: tuple[int, int]
-		-SCREEN: pygame.Surface
-		-CLOCK: pygame.Clock
-		-RENDER_GROUPS: list[pygame.sprite.Group]
-		-dt: float
-		-fixed_steps: float
-		+dt() float
-		+FIXED_DT() float
-		+fixed_steps() float
-		+screen_size() Vector2
-		+next() None
-		+render() None
-		+add_sprite_group() None
-		+remove_sprite_group() None
-		+clear_sprite_group() None
+		-FIXED_DT
+		-MAX_DT
+		-MAX_FPS
+		-screen_size
+		-SCREEN
+		-CLOCK
+		-RENDER_GROUPS
+		-dt
+		-fixed_steps
+		+dt()
+		+FIXED_DT()
+		+fixed_steps()
+		+screen_size()
+		+next()
+		+render()
+		+add_sprite_group()
+		+remove_sprite_group()
+		+clear_sprite_group()
 	}
 	class BasicSprite {
-		-transform: Transform
-		+/size: Vector2
-		+/pos: Vector2
-		+/edge_offset: Vector2
-		+/topleft: Vector2
-		+/botright: Vector2
-		+/screen_size: Vector2
-		+/FIXED_DT: float
-		#set_center() None
-		#move_to() None
-		#move_by() None
-		-rescale() None
-		#set_size() None
-		#set_image() None
-		#load_image() None
-		+overlap() bool
-		+update() None
-		+fixed_update() None
-	}
-	class Command {
-		<<enum>>
-		WAIT
-		OPEN_MENU
-		SWITCH_UI
-		OPEN_LEVEL
-		CLOSE_LEVEL
-		CLOSE_GAME
+		+transform
+		+edge_offset
+		+topleft
+		+botright
+		+screen_size
+		+FIXED_DT
+		#set_center()
+		#move_to()
+		#move_by()
+		-rescale()
+		#set_size()
+		#set_image()
+		#load_image()
+		+overlap()
+		+update()
+		+fixed_update()
 	}
 	class Control {
-		+command: Command
-		+parameter: Any
-		+wait() Control
-		+open_menu() Control
-		+switch_ui() Control
-		+open_level() Control
-		+close_level() Control
-		+close_game() Control
+		+command
+		+parameter
+		+wait()
+		+open_menu()
+		+switch_ui()
+		+open_level()
+		+close_level()
+		+close_game()
 	}
 	class PhysicsSystem {
-		-VELOCITY: Vector2
-		-GRAVITY: float
-		-JUMP: Jump_info
-		-DASH: Dash_info
-		-SPEED: float
-		-dir: float
-		+/on_ground: bool
-		+apply_diff() None
-		+collide() None
-		+apply_grav() None
-		+run() None
-		+dash() None
-		+jump() None
-		+move() Vector2
+		-VELOCITY
+		-GRAVITY
+		-JUMP
+		-DASH
+		-SPEED
+		-dir
+		+on_ground
+		+apply_diff()
+		+collide()
+		+apply_grav()
+		+run()
+		+dash()
+		+jump()
+		+move()
 	}
 	class InterpolationSystem {
-		-last_pos: Vector2
-		+update_last_pos() None
-		+interpolate_pos() Vector2
+		-last_pos
+		+update_last_pos()
+		+interpolate_pos()
 	}
 	class Interpolatable {
 		<<Interface>>
@@ -335,12 +302,11 @@ classDiagram
 	PhysicsSystem --* Player_diff
 	PhysicsSystem ..> BasicSprite
 	class Game {
-		-active: bool
+		+active: bool
 		-FRAME: Frame
 		-UI: UI
 		-level: Level
 		-control: Control
-		+/active: bool
 		+start(start_menu: UIScreen) None
 		+set_command(command: Control) None
 		+execute_command() None
@@ -353,7 +319,7 @@ classDiagram
 		-close_game() None
 	}
 	class LevelState {
-		<<enum>>
+		<<Enum>>
 		BUILDING
 		RUNNING
 		RESETTING
@@ -362,19 +328,14 @@ classDiagram
 	class Level {
 		-DEF_LEVEL_SIZE: Vector2
 		-DEF_TILEMAP_LAYERS: list[str]
-		-SPRITES: pygame.sprite.Group
+		+SPRITES: pygame.sprite.Group
 		-GENERATOR: Callable[[Level], None]
 		-TILEMAP: Tilemap
 		-OBJECTS: list[type[BasicSprite]]
 		-COLLECTABLES: list[type[Collectable]]
 		-FINISHES: list[type[Finish]]
 		-PLAYER: Player
-		-state: LevelState
-		+/SPRITES: pygame.sprite.Group
-		+/TILEMAP_SPRITES: pygame.sprite.Group
-		+/TILEMAP_SIZE: Vector2
-		+/GENERATOR: Callable[[Level], None]
-		+/state: LevelState
+		+state: LevelState
 		+parse_level(level_struct: dict[str, Any]) Callable[[Level], None]
 		-reset_level() None
 		-build_level() None
@@ -392,18 +353,15 @@ classDiagram
 		-PHYSICS: PhysicsSystem
 		-TILEMAP: Tilemap
 		-INTERPOLATOR: InterpolationSystem
-		-dead: bool
-		+/dead: bool
+		+dead: bool
 		+death_check() None
 		+apply_diff(diff: chacracter_diff) None
 	}
 	class Tilemap {
-		-SIZE: Vector2
+		+SIZE: Vector2
 		-TILESIZE: Vector2
 		-SPRITES: pygame.sprite.Group
 		-LAYERS: list[list[BasicSprite]]
-		+/SIZE: Vector2
-		+/SPRITES: pygame.sprite.Group
 		-convert_to_screen(pos: Vector2): Vector
 		-convert_to_tilemap(pos: Vector2): Vector
 		+add_layer(layer_name: str) None
@@ -414,15 +372,12 @@ classDiagram
 	}
 	class Finish {
 		-PLAYER: type[BasicSprite]
-		-finished: bool
-		+/finished: bool
+		+finished: bool
 	}
 	class Collectable {
-		-DIFF: Player_diff
-		-is_collected: bool
+		+DIFF: Player_diff
+		+is_collected: bool
 		-PLAYER: type[BasicSprite]
-		+/DIFF: Player_diff
-		+/is_collected: bool
 	}
 	class MovingCollectable {
 		-SPEED: float
@@ -435,7 +390,7 @@ classDiagram
 	class UI {
 		-start_menu: UIScreen
 		-current_screen: UIScreen
-		+/SPRITES: pygame.sprite.Group | None
+		+SPRITES: pygame.sprite.Group | None
 		+set_start_menu(start_menu: UIScreen) None
 		+open_start_menu() None
 		+switch_ui(screen: UIScreen) None
@@ -443,9 +398,8 @@ classDiagram
 		+press_buttons() Control
 	}
 	class UIScreen {
-		-SPRITES: pygame.sprite.Group
+		+SPRITES: pygame.sprite.Group
 		-BUTTONS: list[Button]
-		+/SPRITES: pygame.sprite.Group
 		+add_text(text: str, transform: Transform) None
 		+add_button(sprite_path: str, transform: Transform, callback: Callable[[], Control]) None
 		+press_buttons() Control | None
@@ -478,14 +432,12 @@ classDiagram
 		+clear_sprite_group() None
 	}
 	class BasicSprite {
-		-transform: Transform
-		+/size: Vector2
-		+/pos: Vector2
-		+/edge_offset: Vector2
-		+/topleft: Vector2
-		+/botright: Vector2
-		+/screen_size: Vector2
-		+/FIXED_DT: float
+		+transform: Transform
+		+edge_offset: Vector2
+		+topleft: Vector2
+		+botright: Vector2
+		+screen_size: Vector2
+		+FIXED_DT: float
 		#set_center(pos: Vector2) None
 		#move_to(new_pos: Vector2) None
 		#move_by(offset: Vector2) None
@@ -498,7 +450,7 @@ classDiagram
 		+fixed_update() None
 	}
 	class Command {
-		<<enum>>
+		<<Enum>>
 		WAIT
 		OPEN_MENU
 		SWITCH_UI
@@ -562,7 +514,7 @@ classDiagram
 		-DASH: Dash_info
 		-SPEED: float
 		-dir: float
-		+/on_ground: bool
+		+on_ground: bool
 		+apply_diff(diff: Player_diff) None
 		+collide(obj: type[BasicSprite], ground: TilemapLayer) None
 		+apply_grav() None
@@ -578,6 +530,6 @@ classDiagram
 	}
 	class Interpolatable {
 		<<Interface>>
-		+interpolate_sprite_pos()
+		+interpolate_sprite_pos() None
 	}
 ```

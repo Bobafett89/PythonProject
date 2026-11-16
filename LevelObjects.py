@@ -34,14 +34,6 @@ class Level:
         return self.__SPRITES
 
     @property
-    def TILEMAP_SIZE(self) -> Vector2:
-        return self.__TILEMAP.SIZE
-
-    @property
-    def GENERATOR(self) -> Callable[[Level], None]:
-        return self.__GENERATOR
-
-    @property
     def state(self) -> LevelState:
         return self.__state
 
@@ -246,7 +238,7 @@ class Level:
     def __reset_level(self) -> None:
         self.__set_state(LevelState.BUILDING)
         self.__SPRITES.empty()
-        self.__TILEMAP = Tilemap(self.TILEMAP_SIZE, self.__SPRITES)
+        self.__TILEMAP = Tilemap(self.__TILEMAP.SIZE, self.__SPRITES)
         self.__OBJECTS = []
         self.__COLLECTABLES = []
         self.__INTERPOLATED = []
@@ -418,10 +410,6 @@ class Tilemap:
     @property
     def SIZE(self) -> Vector2:
         return self.__SIZE
-
-    @property
-    def SPRITES(self) -> pygame.sprite.Group:
-        return self.__SPRITES
 
     def __convert_to_screen(self, pos: Vector2) -> Vector2:
         return vector2_div(pos, self.__SIZE)

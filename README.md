@@ -62,9 +62,7 @@ classDiagram
 	Player ..|> Interpolatable
 	Tilemap --o BasicSprite
 	Finish --|> BasicSprite
-	Finish ..> BasicSprite
 	Collectable --|> BasicSprite
-	Collectable ..> BasicSprite
 	MovingCollectable --|> Collectable
 	MovingCollectable --o InterpolationSystem
 	MovingCollectable ..|> Interpolatable
@@ -314,9 +312,7 @@ classDiagram
 	Player ..|> Interpolatable
 	Tilemap --o BasicSprite
 	Finish --|> BasicSprite
-	Finish ..> BasicSprite
 	Collectable --|> BasicSprite
-	Collectable ..> BasicSprite
 	MovingCollectable --|> Collectable
 	MovingCollectable --o InterpolationSystem
 	MovingCollectable ..|> Interpolatable

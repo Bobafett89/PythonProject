@@ -5,7 +5,14 @@ from Utils import in_rect, direction, trunc_vector2, vector2_div, vector2_mult, 
 from math import ceil
 from collections.abc import Callable
 from typing import Any
+from enum import Enum, auto
 
+class LevelState(Enum):
+    BUILDING = auto(),
+    RUNNING = auto(),
+    RESETTING = auto(),
+    FINISHED = auto()
+    
 class Level:
     __DEF_LEVEL_SIZE: Vector2 = Vector2(16, 9)
     __DEF_TILEMAP_LAYERS: list[str] = ["ground", "hazard"]
@@ -19,8 +26,8 @@ class Level:
         self.__INTERPOLATED: list[Interpolatable] = []
         self.__FINISHES: list[type[Finish]] = []
         self.__PLAYER: Player = None
+        self.__state: LevelState = LevelState.BUILDING
         self.__build_level()
-        self.__command: Control = None
 
     @property
     def SPRITES(self) -> pygame.sprite.Group:
@@ -39,11 +46,8 @@ class Level:
         return self.__GENERATOR
 
     @property
-    def command(self) -> Control:
-        if (self.__command != None):
-            return self.__command
-        else:
-            return Control.wait()
+    def state(self) -> LevelState:
+        return self.__state
 
     @classmethod
     def parse_level(cls, level_struct: dict[str, Any]) -> Callable[[Level], None]:
@@ -247,10 +251,22 @@ class Level:
         for name in Level.__DEF_TILEMAP_LAYERS:
             self.__TILEMAP.add_layer(name)
         self.__GENERATOR(self)
+        self.__set_state(LevelState.RUNNING)
 
-    def __set_command(self, command: Control) -> None:
-        if (self.__command == None):
-            self.__command = command
+    def __set_state(self, new_state: LevelState) -> None:
+        match (new_state):
+            case LevelState.RUNNING:
+                if (self.__state == LevelState.BUILDING):
+                    self.__state = new_state
+            case LevelState.RESETTING:
+                if (self.__state == LevelState.RUNNING):
+                    self.__state = new_state
+            case LevelState.FINISHED:
+                if (self.__state == LevelState.RUNNING):
+                    self.__state = new_state
+            case LevelState.BUILDING:
+                if (self.__state == LevelState.RESETTING or self.__state == LevelState.FINISHED):
+                    self.__state = new_state
 
     def __interpolate_sprite_poses(self) -> None:
         for object in self.__INTERPOLATED:
@@ -263,10 +279,10 @@ class Level:
             for object in self.__OBJECTS:
                 object.fixed_update()
             if (self.__PLAYER.dead):
-                self.__set_command(Control.restart_level())
+                self.__set_state(LevelState.RESETTING)
             for finish in self.__FINISHES:
                 if (finish.finished):
-                    self.__set_command(Control.close_level())
+                    self.__set_state(LevelState.FINISHED)
         self.__collect_items()
         self.__interpolate_sprite_poses()
 
@@ -408,7 +424,7 @@ class Tilemap:
             layer.append([])
             for j in range(int(self.__SIZE.y)):
                 layer[i].append(None)
-        self.__LAYERS[name] = layer
+        self.__LAYERS[layer_name] = layer
 
     def get_layer(self, layer_name: str, pseudo_border: bool) -> list[BasicSprite]:
         topleft: Vector2 = Vector2(-1, -1)

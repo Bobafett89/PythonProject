@@ -1,7 +1,7 @@
 import pygame
 from pygame import Vector2
 from BasicObjects import Control, Command, Frame
-from LevelObjects import Level
+from LevelObjects import Level, LevelState
 from UI import UI
 from os import path
 from json import loads, decoder
@@ -67,7 +67,11 @@ class GAME:
         cls.set_command(button_command)
         if (cls.__level != None):
             cls.__level.logic(int(Frame.fixed_steps()))
-            cls.set_command(cls.__level.command)
+            match (cls.__level.state):
+                case LevelState.RESETTING:
+                    cls.set_command(Control.restart_level())
+                case LevelState.FINISHED:
+                    cls.set_command(Control.close_level())
 
     @classmethod
     def next_frame(cls) -> None:

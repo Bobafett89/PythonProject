@@ -54,7 +54,7 @@ classDiagram
 	Level --* Collectable
 	Level --* MovingCollectable
 	Level --* Finish
-	Level ..> Control
+	Level --* LevelState
 	Player --|> BasicSprite
 	Player --* PhysicsSystem
 	Player --o InterpolationSystem
@@ -96,6 +96,13 @@ classDiagram
 		-open_main_menu() None
 		-close_game() None
 	}
+	class LevelState {
+		<<enum>>
+		BUILDING
+		RUNNING
+		RESETTING
+		FINISHED
+	}
 	class Level {
 		-DEF_LEVEL_SIZE: Vector2
 		-DEF_TILEMAP_LAYERS: list[str]
@@ -106,15 +113,15 @@ classDiagram
 		-COLLECTABLES: list[type[Collectable]]
 		-FINISHES: list[type[Finish]]
 		-PLAYER: Player
-		-command: Control
+		-state: LevelState
 		+/SPRITES: pygame.sprite.Group
 		+/TILEMAP_SPRITES: pygame.sprite.Group
 		+/TILEMAP_SIZE: Vector2
 		+/GENERATOR: Callable[[Level], None]
-		+/command: Control
+		+/state: LevelState
 		+parse_level() Callable[[Level], None]
 		-build_level() None
-		-set_command() None
+		-set_state() None
 		+logic() None
 		+add_ground_tile() None
 		+add_hazard_tile() None
@@ -302,7 +309,7 @@ classDiagram
 	Level --* Collectable
 	Level --* MovingCollectable
 	Level --* Finish
-	Level ..> Control
+	Level --* LevelState
 	Player --|> BasicSprite
 	Player --* PhysicsSystem
 	Player --o InterpolationSystem
@@ -350,6 +357,13 @@ classDiagram
 		-open_main_menu() None
 		-close_game() None
 	}
+	class LevelState {
+		<<enum>>
+		BUILDING
+		RUNNING
+		RESETTING
+		FINISHED
+	}
 	class Level {
 		-DEF_LEVEL_SIZE: Vector2
 		-DEF_TILEMAP_LAYERS: list[str]
@@ -360,15 +374,15 @@ classDiagram
 		-COLLECTABLES: list[type[Collectable]]
 		-FINISHES: list[type[Finish]]
 		-PLAYER: Player
-		-command: Control
+		-state: LevelState
 		+/SPRITES: pygame.sprite.Group
 		+/TILEMAP_SPRITES: pygame.sprite.Group
 		+/TILEMAP_SIZE: Vector2
 		+/GENERATOR: Callable[[Level], None]
-		+/command: Control
+		+/state: LevelState
 		+parse_level(level_struct: dict[str, Any]) Callable[[Level], None]
 		-build_level() None
-		-set_command(command: Control) None
+		-set_state(new_state: LevelState) None
 		+logic(fixed_steps: int) None
 		+add_ground_tile(sprite_path: str, tile_pos: Vector2) None
 		+add_hazard_tile(sprite_path: str, tile_pos: Vector2) None

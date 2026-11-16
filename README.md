@@ -76,14 +76,13 @@ classDiagram
 	BasicSprite ..> Frame
 	Control --* Command
 	PhysicsSystem ..> BasicSprite
-	class GAME {
+	class Game {
 		-active: bool
 		-FRAME: Frame
 		-UI: UI
 		-level: Level
 		-control: Control
-		+active() bool
-		+init() None
+		+/active: bool
 		+start() None
 		+set_command() None
 		+execute_command() None
@@ -335,14 +334,13 @@ classDiagram
 	PhysicsSystem --* Dash_info
 	PhysicsSystem --* Player_diff
 	PhysicsSystem ..> BasicSprite
-	class GAME {
+	class Game {
 		-active: bool
 		-FRAME: Frame
 		-UI: UI
 		-level: Level
 		-control: Control
-		+active() bool
-		+init() None
+		+/active: bool
 		+start(start_menu: UIScreen) None
 		+set_command(command: Control) None
 		+execute_command() None

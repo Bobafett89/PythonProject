@@ -8,73 +8,61 @@ from json import loads, decoder
 from collections.abc import Callable
 from typing import Any, TextIO
 
-class GAME:
-    __active: bool = None
-    __FRAME: Frame = None
-    __UI: UI = None
-    __level: Level = None
-    __control: Control = None
+class Game:
+    def __init__(self) -> None:
+        self.__active: bool = False
+        self.__FRAME: Frame = Frame()
+        self.__UI: UI = UI()
+        self.__level: Level = None
+        self.__control: Control = Control.wait()
 
-    @classmethod
-    def active(cls) -> bool:
-        return cls.__active
+    @property
+    def active(self) -> bool:
+        return self.__active
 
-    @classmethod
-    def init(cls) -> None:
-        cls.__active = False
-        cls.__FRAME = Frame()
-        cls.__UI = UI()
-        cls.__control = Control.wait()
+    def start(self, start_menu: UIScreen) -> None:
+        self.__UI.set_start_menu(start_menu)
+        self.__open_main_menu()
+        self.__active = True
 
-    @classmethod
-    def start(cls, start_menu: UIScreen) -> None:
-        cls.__UI.set_start_menu(start_menu)
-        cls.__open_main_menu()
-        cls.__active = True
+    def set_command(self, command: Control) -> None:
+        if (command.command.value > self.__control.command.value):
+            self.__control = command
 
-    @classmethod
-    def set_command(cls, command: Control) -> None:
-        if (command.command.value > cls.__control.command.value):
-            cls.__control = command
-
-    @classmethod
-    def execute_command(cls) -> None:
-        match cls.__control.command:
+    def execute_command(self) -> None:
+        match self.__control.command:
             case Command.WAIT:
                 pass
             case Command.OPEN_MENU:
-                cls.__open_main_menu()
+                self.__open_main_menu()
             case Command.SWITCH_UI:
-                cls.__FRAME.remove_sprite_group(cls.__UI.SPRITES)
-                cls.__UI.switch_ui(cls.__control.parameter)
-                cls.__FRAME.add_sprite_group(cls.__UI.SPRITES)
+                self.__FRAME.remove_sprite_group(self.__UI.SPRITES)
+                self.__UI.switch_ui(self.__control.parameter)
+                self.__FRAME.add_sprite_group(self.__UI.SPRITES)
             case Command.OPEN_LEVEL:
                 try:
-                    cls.__start_level_from_file(cls.__control.parameter)
+                    self.__start_level_from_file(self.__control.parameter)
                 except RuntimeError:
                     pass
             case Command.CLOSE_LEVEL:
-                cls.__close_level()
+                self.__close_level()
             case Command.CLOSE_GAME:
-                cls.__close_game()
-        cls.__control = Control.wait()
+                self.__close_game()
+        self.__control = Control.wait()
 
-    @classmethod
-    def update(cls) -> None:
-        button_command: Control = cls.__UI.press_buttons()
-        cls.set_command(button_command)
-        if (cls.__level != None):
-            cls.__level.logic(int(Frame.fixed_steps()))
-            if (cls.__level.state):
-                cls.set_command(Control.close_level())
+    def update(self) -> None:
+        button_command: Control = self.__UI.press_buttons()
+        self.set_command(button_command)
+        if (self.__level != None):
+            self.__level.logic(int(Frame.fixed_steps()))
+            if (self.__level.state == LevelState.FINISHED):
+                self.set_command(Control.close_level())
 
-    @classmethod
-    def next_frame(cls) -> None:
-        cls.__FRAME.render()
-        cls.__FRAME.next()
+    def next_frame(self) -> None:
+        self.__FRAME.render()
+        self.__FRAME.next()
 
-    @classmethod
-    def __start_level_from_file(cls, level_name: str) -> None:
+    def __start_level_from_file(self, level_name: str) -> None:
         level_name: str = path.join("Levels", level_name)
         try:
             level_file: TextIO = open(level_name)
@@ -93,27 +81,23 @@ class GAME:
                 except RuntimeError:
                     raise RuntimeError("Json has wrong structure")
                 else:
-                    cls.__start_level(generator, Vector2(level_structure["tilemap_size"]))
+                    self.__start_level(generator, Vector2(level_structure["tilemap_size"]))
 
-    @classmethod
-    def __start_level(cls, generator: Callable[[Level], None], tilemap_size: Vector2) -> None:
-        cls.__level = Level(generator, tilemap_size)
-        cls.__UI.clear_ui()
-        cls.__FRAME.clear_sprite_group()
-        cls.__FRAME.add_sprite_group(cls.__level.SPRITES)
+    def __start_level(self, generator: Callable[[Level], None], tilemap_size: Vector2) -> None:
+        self.__level = Level(generator, tilemap_size)
+        self.__UI.clear_ui()
+        self.__FRAME.clear_sprite_group()
+        self.__FRAME.add_sprite_group(self.__level.SPRITES)
 
-    @classmethod
-    def __close_level(cls) -> None:
-        cls.__level = None
-        cls.__open_main_menu()
+    def __close_level(self) -> None:
+        self.__level = None
+        self.__open_main_menu()
 
-    @classmethod
-    def __open_main_menu(cls) -> None:
-        cls.__FRAME.clear_sprite_group()
-        cls.__UI.open_start_menu()
-        cls.__FRAME.add_sprite_group(cls.__UI.SPRITES)
+    def __open_main_menu(self) -> None:
+        self.__FRAME.clear_sprite_group()
+        self.__UI.open_start_menu()
+        self.__FRAME.add_sprite_group(self.__UI.SPRITES)
 
-    @classmethod
-    def __close_game(cls) -> None:
-        cls.__active = False
+    def __close_game(self) -> None:
+        self.__active = False
 

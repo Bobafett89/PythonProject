@@ -2,7 +2,7 @@ import pygame
 from pygame import Vector2
 from Utils import vector2_div, vector2_mult
 from BasicObjects import Control, Transform
-from Game import GAME
+from Game import Game
 from UI import UIScreen
 from os import listdir
 from math import ceil
@@ -69,13 +69,13 @@ def open_level_selection() -> Control:
     return Control.switch_ui(level_selection())
 
 pygame.init()
-GAME.init()
+GAME: Game = Game()
 menu = UIScreen()
 menu.add_button("CharBlock.png", Transform(Vector2(0.5, 0.2), Vector2(0.5, 0.3)), open_level_selection)
 menu.add_button("HazardBlock.png", Transform(Vector2(0.5, 0.2), Vector2(0.5, 0.7)), close_game)
 GAME.start(menu)
 
-while GAME.active():
+while GAME.active:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             GAME.set_command(Control.close_game())

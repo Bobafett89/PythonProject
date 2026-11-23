@@ -375,7 +375,7 @@ class Player(BasicSprite, Interpolatable):
         if (keys[pygame.K_w] and self.__PHYSICS.on_ground):
             self.__PHYSICS.jump()
 
-        self.__PHYSICS.collide(self, self.__TILEMAP.get_layer("ground", True))
+        self.__PHYSICS.collide(self, self.__TILEMAP, "ground")
         self.__INTERPOLATOR.update_last_pos(self.pos)
         self._move_by(self.__PHYSICS.move())
         self.death_check()
@@ -424,17 +424,6 @@ class Tilemap:
             for j in range(int(self.__SIZE.y)):
                 layer[i].append(None)
         self.__LAYERS[layer_name] = layer
-
-    def get_layer(self, layer_name: str, pseudo_border: bool) -> list[BasicSprite]:
-        topleft: Vector2 = Vector2(-1, -1)
-        botright: Vector2 = self.__SIZE
-        tiles: list[BasicSprite] = []
-        for i in range(int(topleft.x), int(botright.x + 1)):
-            for j in range(int(topleft.y), int(botright.y + 1)):
-                tile: BasicSprite = self.get_tile(layer_name, Vector2(i, j), pseudo_border)
-                if (tile != None):
-                    tiles.append(tile)
-        return tiles
 
     def add_tile(self, sprite_path: str, layer_name: str, tile_pos: Vector2) -> None:
         layer: list[list[BasicSprite]] = self.__LAYERS[layer_name]

@@ -70,6 +70,7 @@ classDiagram
 	BasicSprite --|> pygame.sprite.Sprite
 	BasicSprite ..> Frame
 	PhysicsSystem ..> BasicSprite
+	PhysicsSystem ..> Tilemap
 	class Game {
 		+active
 		-FRAME
@@ -127,7 +128,6 @@ classDiagram
 		-convert_to_screen()
 		-convert_to_tilemap()
 		+add_layer()
-		+get_layer()
 		+add_tile()
 		+get_tile()
 		+collides()
@@ -296,6 +296,7 @@ classDiagram
 	PhysicsSystem --* Dash_info
 	PhysicsSystem --* Player_diff
 	PhysicsSystem ..> BasicSprite
+	PhysicsSystem ..> Tilemap
 	class Game {
 		+active: bool
 		-FRAME: Frame
@@ -360,7 +361,6 @@ classDiagram
 		-convert_to_screen(pos: Vector2): Vector
 		-convert_to_tilemap(pos: Vector2): Vector
 		+add_layer(layer_name: str) None
-		+get_layer(layer_name: str, pseudo_border: bool) list[BasicSprite]
 		+add_tile(sprite_path: str, layer_name: str, tile_pos: Vector2) None
 		+get_tile(layer_name: str, tile_pos: Vector2, pseudo_tile: bool) BasicSprite | None
 		+collides(layer_name: str, object: type[BasicSprite], pseudo_tiles: bool) list[BasicSprite]

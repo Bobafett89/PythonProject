@@ -237,7 +237,7 @@ class PhysicsSystem:
         self.__DASH.count += diff.dashes
         self.__DASH.def_count += diff.def_dashes
 
-    def collide(self, obj: type[BasicSprite], ground: list[BasicSprite]) -> None:
+    def collide(self, obj: type[BasicSprite], tilemap: Tilemap, layer_name: str) -> None:
         def hit_floor() -> None:
             if (self.__VELOCITY.y > 0):
                 self.__JUMP.on_ground = True
@@ -256,7 +256,8 @@ class PhysicsSystem:
         if (self.__VELOCITY.y != 0):
             self.__JUMP.on_ground = False
         new_state: BasicSprite = next_state()
-        tiles: list[BasicSprite] = list(filter(lambda object: object.overlap(new_state), ground))
+        # tiles: list[BasicSprite] = list(filter(lambda object: object.overlap(new_state), ground))
+        tiles: list[BasicSprite] = tilemap.collides(layer_name, new_state, True)
         tiles.sort(key = (lambda tile: (tile.pos - obj.pos).length()))
         for tile in tiles:
             min_dist: Vector2 = new_state.edge_offset + tile.edge_offset

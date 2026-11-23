@@ -6,7 +6,6 @@ from typing import Any
 from dataclasses import dataclass
 from abc import ABC, abstractmethod
 from os import path
-from math import floor
 
 class Frame:
     __FIXED_DT: float = 1 / 50
@@ -91,7 +90,7 @@ class BasicSprite(pygame.sprite.Sprite):
         return Frame.screen_size()
 
     @property
-    def FIXED_DT(sefl) -> float:
+    def FIXED_DT(self) -> float:
         return Frame.FIXED_DT()
 
     def _set_center(self, pos: Vector2) -> None:

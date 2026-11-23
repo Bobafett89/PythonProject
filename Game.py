@@ -1,8 +1,7 @@
-import pygame
 from pygame import Vector2
 from BasicObjects import Control, Command, Frame
 from LevelObjects import Level, LevelState
-from UI import UI
+from UI import UI, UIScreen
 from os import path
 from json import loads, decoder
 from collections.abc import Callable

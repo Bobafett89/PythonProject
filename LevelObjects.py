@@ -1,6 +1,6 @@
 import pygame
 from pygame import Vector2
-from BasicObjects import BasicSprite, Player_diff, Control, Jump_params, Dash_params, Transform, PhysicsSystem, InterpolationSystem, Interpolatable
+from BasicObjects import BasicSprite, Player_diff, Jump_params, Dash_params, Transform, PhysicsSystem, InterpolationSystem, Interpolatable
 from Utils import in_rect, direction, trunc_vector2, vector2_div, vector2_mult, Interval
 from math import ceil
 from collections.abc import Callable
@@ -156,7 +156,7 @@ class Level:
             for item in static_items:
                 for pos in item["pos"]:
                     item_size: Vector2 = to_screen_vector(point_to_vector(item["size"]))
-                    item_pos: Vecttor2 = to_screen_vector(point_to_vector(pos))
+                    item_pos: Vector2 = to_screen_vector(point_to_vector(pos))
                     item_diff: Player_diff = Player_diff(item["diff"][0], item["diff"][1], item["diff"][2], item["diff"][3])
                     level.add_static_item(item["spr"], Transform(item_size, item_pos), item_diff)
 
@@ -385,7 +385,7 @@ class Player(BasicSprite, Interpolatable):
         if (len(hazard_contacts) > 0):
             self.__dead = True
 
-    def apply_diff(self, diff: chacracter_diff) -> None:
+    def apply_diff(self, diff: Player_diff) -> None:
         self.__PHYSICS.apply_diff(diff)
 
     def __debug(self) -> None:

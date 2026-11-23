@@ -25,9 +25,6 @@ def load_level(level_path: str) -> Callable[[], Control]:
     return start_level
 
 def level_selection() -> UIScreen:
-    def calc_pos(grid_pos: Vector2) -> Vector2:
-        return vector2_mult(grid_pos, grid_offset) + gap + button_size / 2
-
     files: list[str] = listdir("Levels")
     files = list(filter(lambda file: file.endswith(".json"), files))
     grid: Vector2 = Vector2(5, 3)
@@ -40,6 +37,9 @@ def level_selection() -> UIScreen:
     grid_offset: Vector2 = button_size + gap
     text_size: Vector2 = Vector2(button_size.x, 0) + gap / 2
     pages: list[UIScreen] = []
+    def calc_pos(grid_pos: Vector2) -> Vector2:
+        return vector2_mult(grid_pos, grid_offset) + gap + button_size / 2
+
     for page in range(pages_count):
         pages.append(UIScreen())
         for level_number in range(min(levels_per_page, len(files) - page * levels_per_page)):

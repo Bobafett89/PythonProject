@@ -1,7 +1,7 @@
 import pygame
 from pygame import Vector2
-from BasicObjects import BasicSprite, Player_diff, Jump_params, Dash_params, Transform, PhysicsSystem, InterpolationSystem, Interpolatable
-from Utils import in_rect, direction, trunc_vector2, vector2_div, vector2_mult, Interval
+from BasicObjects import BasicSprite, PlayerDiff, JumpParams, DashParams, Transform, InterpolationSystem, Interpolatable, JumpInfo, DashInfo
+from Utils import in_rect, direction, trunc_vector2, vector2_div, vector2_mult, abs_vector2, Interval
 from math import ceil
 from collections.abc import Callable
 from typing import Any
@@ -139,8 +139,8 @@ class Level:
 
             player_pos: Vector2 = to_screen_vector(point_to_vector(player["pos"]))
             player_size: Vector2 = to_screen_vector(point_to_vector(player["size"]))
-            jump: Jump_params = Jump_params(jump["dist"] / level_size.x, jump["height"] / level_size.y, jump["time"])
-            dash: Dash_params = Dash_params(dash["dist"] / level_size.x, dash["time"])
+            jump: JumpParams = JumpParams(jump["dist"] / level_size.x, jump["height"] / level_size.y, jump["time"])
+            dash: DashParams = DashParams(dash["dist"] / level_size.x, dash["time"])
             level.add_player(player["spr"], Transform(player_size, player_pos), jump, dash)
 
             for finish in finishes:
@@ -157,7 +157,7 @@ class Level:
                 for pos in item["pos"]:
                     item_size: Vector2 = to_screen_vector(point_to_vector(item["size"]))
                     item_pos: Vector2 = to_screen_vector(point_to_vector(pos))
-                    item_diff: Player_diff = Player_diff(item["diff"][0], item["diff"][1], item["diff"][2], item["diff"][3])
+                    item_diff: PlayerDiff = PlayerDiff(item["diff"][0], item["diff"][1], item["diff"][2], item["diff"][3])
                     level.add_static_item(item["spr"], Transform(item_size, item_pos), item_diff)
 
             for item in moving_items:
@@ -166,7 +166,7 @@ class Level:
                     item_pos: Vector2 = to_screen_vector(point_to_vector(item["pos"][i]))
                     item_dest: Vector2 = to_screen_vector(point_to_vector(item["dest"][i]))
                     item_speed: float = (item_dest - item_pos).length() / item["time"]
-                    item_diff: Player_diff = Player_diff(item["diff"][0], item["diff"][1], item["diff"][2], item["diff"][3])
+                    item_diff: PlayerDiff = PlayerDiff(item["diff"][0], item["diff"][1], item["diff"][2], item["diff"][3])
                     level.add_moving_item(item["spr"], Transform(item_size, item_pos), item_diff, item_speed, item_dest)
 
         valid_size_factor: bool = has_keys("size_factor", level_struct, int)
@@ -295,7 +295,7 @@ class Level:
     def add_hazard_tile(self, sprite_path: str, tile_pos: Vector2) -> None:
         self.__TILEMAP.add_tile(sprite_path, "hazard", tile_pos)
 
-    def add_player(self, sprite_path: str, transform: Transform, jump: Jump_params, dash: Dash_params) -> None:
+    def add_player(self, sprite_path: str, transform: Transform, jump: JumpParams, dash: DashParams) -> None:
         if (self.__PLAYER != None):
             raise RuntimeError("More than one player can't be spawned")
         self.__PLAYER = Player(sprite_path, transform, jump, dash, self.__TILEMAP)
@@ -309,13 +309,13 @@ class Level:
         self.__FINISHES.append(finish)
         self.__SPRITES.add(finish)
 
-    def add_static_item(self, sprite_path: str, transform: Transform, diff: Player_diff) -> None:
+    def add_static_item(self, sprite_path: str, transform: Transform, diff: PlayerDiff) -> None:
         power_up: PowerUp = PowerUp(sprite_path, transform, self.__PLAYER, diff)
         self.__OBJECTS.append(power_up)
         self.__POWER_UPS.append(power_up)
         self.__SPRITES.add(power_up)
 
-    def add_moving_item(self, sprite_path: str, transform: Transform, diff: Player_diff, speed: float, destination: Vector2) -> None:
+    def add_moving_item(self, sprite_path: str, transform: Transform, diff: PlayerDiff, speed: float, destination: Vector2) -> None:
         power_up: MovingPowerUp = MovingPowerUp(sprite_path, transform, self.__PLAYER, diff, speed, destination)
         self.__OBJECTS.append(power_up)
         self.__POWER_UPS.append(power_up)
@@ -331,7 +331,7 @@ class Level:
                 self.__SPRITES.remove(object)
 
 class Player(BasicSprite, Interpolatable):
-    def __init__(self, sprite_path: str, transform: Transform, jump: Jump_params, dash: Dash_params, tilemap: Tilemap) -> None:
+    def __init__(self, sprite_path: str, transform: Transform, jump: JumpParams, dash: DashParams, tilemap: Tilemap) -> None:
         super().__init__(sprite_path, transform)
         jump_force: float = 2 * jump.height / jump.time * self.FIXED_DT
         gravity: float = jump_force / jump.time * self.FIXED_DT
@@ -385,7 +385,7 @@ class Player(BasicSprite, Interpolatable):
         if (len(hazard_contacts) > 0):
             self.__dead = True
 
-    def apply_diff(self, diff: Player_diff) -> None:
+    def apply_diff(self, diff: PlayerDiff) -> None:
         self.__PHYSICS.apply_diff(diff)
 
     def __debug(self) -> None:
@@ -475,16 +475,16 @@ class Collectable(BasicSprite):
         self._collect()
 
 class PowerUp(Collectable):
-    def __init__(self, sprite_path: str | None, transform: Transform, player: type[BasicSprite], diff: Player_diff) -> None:
+    def __init__(self, sprite_path: str | None, transform: Transform, player: type[BasicSprite], diff: PlayerDiff) -> None:
         super().__init__(sprite_path, transform, player)
-        self.__DIFF: Player_diff = diff
+        self.__DIFF: PlayerDiff = diff
 
     @property
-    def DIFF(self) -> Player_diff:
+    def DIFF(self) -> PlayerDiff:
         return self.__DIFF
 
 class MovingPowerUp(PowerUp, Interpolatable):
-    def __init__(self, sprite_path: str | None, transform: Transform, player: type[BasicSprite], diff: Player_diff, speed: float, destination: Vector2) -> None:
+    def __init__(self, sprite_path: str | None, transform: Transform, player: type[BasicSprite], diff: PlayerDiff, speed: float, destination: Vector2) -> None:
         super().__init__(sprite_path, transform, player, diff)
         self.__SPEED: float = speed * self.FIXED_DT
         self.__START: Vector2 = self.pos.copy()
@@ -512,4 +512,98 @@ class MovingPowerUp(PowerUp, Interpolatable):
         self.__INTERPOLATOR.update_last_pos(self.pos)
         self._move_by(offset)
         super().fixed_update()
+
+class PhysicsSystem:
+    def __init__(self, speed: float, jump_force: float, gravity: float, dash_dist: float, dash_speed: float) -> None:
+        self.__VELOCITY: Vector2 = Vector2(0, 0)
+        self.__GRAVITY: float = gravity
+        self.__JUMP: JumpInfo = JumpInfo(force=jump_force)
+        self.__DASH: DashInfo = DashInfo(distance=dash_dist, speed=dash_speed)
+        self.__SPEED: float = speed
+        self.__dir: float = 1
+
+    @property
+    def on_ground(self) -> bool:
+        return self.__JUMP.on_ground
+
+    def apply_diff(self, diff: PlayerDiff) -> None:
+        self.__JUMP.air_jumps += diff.air_jumps
+        self.__JUMP.def_air_jumps += diff.def_air_jumps
+        self.__DASH.count += diff.dashes
+        self.__DASH.def_count += diff.def_dashes
+
+    def collide(self, obj: type[BasicSprite], tilemap: Tilemap, layer_name: str) -> None:
+        def hit_floor() -> None:
+            if (self.__VELOCITY.y > 0):
+                self.__JUMP.on_ground = True
+                if (self.__JUMP.air_jumps < self.__JUMP.def_air_jumps):
+                    self.__JUMP.air_jumps = self.__JUMP.def_air_jumps
+                if (self.__DASH.count < self.__DASH.def_count):
+                    self.__DASH.count = self.__DASH.def_count
+
+        def hit_wall() -> None:
+            self.__DASH.is_active = False
+            self.__DASH.destination = None
+
+        def next_state() -> BasicSprite:
+            return BasicSprite(None, Transform(obj.size, obj.pos + self.__VELOCITY))
+
+        if (self.__VELOCITY.y != 0):
+            self.__JUMP.on_ground = False
+        new_state: BasicSprite = next_state()
+        tiles: list[BasicSprite] = tilemap.collides(layer_name, new_state, True)
+        tiles.sort(key = (lambda tile: (tile.pos - obj.pos).length()))
+        for tile in tiles:
+            min_dist: Vector2 = new_state.edge_offset + tile.edge_offset
+            current_disp: Vector2 = tile.pos - obj.pos
+            new_dist: Vector2 = abs_vector2(tile.pos - new_state.pos)
+            if (new_dist.x < min_dist.x and new_dist.y < min_dist.y):
+                epsilon: float = 2 ** (-53)
+                overlap: Vector2 = min_dist - new_dist + Vector2(epsilon, epsilon)
+                offset: Vector2 = Vector2(0, 0)
+                if (abs(current_disp.x) < min_dist.x or (overlap.x >= overlap.y and not abs(current_disp.y) < min_dist.y)):
+                    offset.y = overlap.y * direction(current_disp.y < 0)
+                    hit_floor()
+                else:
+                    offset.x = overlap.x * direction(current_disp.x < 0)
+                    hit_wall()
+                self.__VELOCITY += offset
+                new_state = next_state()
+
+    def apply_grav(self) -> None:
+        if (not self.__DASH.is_active):
+            self.__VELOCITY.y += self.__GRAVITY
+        else:
+            self.__VELOCITY.y = 0
+            self.__JUMP.on_ground = False
+
+    def run(self, dir: float) -> None:
+        if (not self.__DASH.is_active):
+            self.__VELOCITY.x = self.__SPEED * dir
+
+    def dash(self) -> None:
+        dash = self.__DASH
+        if (not dash.is_active and dash.count > 0):
+            dash.is_active = True
+            dash.left = dash.distance
+            dash.count -= 1
+            self.__VELOCITY.x = dash.speed * self.__dir
+
+    def jump(self) -> None:
+        if (not self.__DASH.is_active):
+            if (self.__JUMP.on_ground or self.__JUMP.air_jumps > 0):
+                self.__VELOCITY.y = -self.__JUMP.force
+                if (not self.__JUMP.on_ground):
+                    self.__JUMP.air_jumps -= 1
+
+    def move(self) -> Vector2:
+        if (self.__VELOCITY.x != 0):
+            self.__dir = direction(self.__VELOCITY.x > 0)
+            dash: DashInfo = self.__DASH
+            if (dash.is_active):
+                if (abs(self.__VELOCITY.x) >= dash.left):
+                    self.__VELOCITY.x = dash.left * self.__dir
+                    dash.is_active = False
+                dash.left -= abs(self.__VELOCITY.x)
+        return self.__VELOCITY
 

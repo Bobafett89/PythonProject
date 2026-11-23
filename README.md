@@ -1,4 +1,4 @@
-# План рефакторинга (модуль 1-5)
+# План рефакторинга (модуль 1-7)
 
 ## Модуль 1
 - [x] Настроить ENV и добавить Requirements
@@ -26,6 +26,13 @@
 
 ## Модуль 5
 - [x] Сделать FSM для Level
+
+## Модуль 6
+- [ ] Singleton для Frame и Game
+- [ ] Реализовать систему ивентов
+
+## Модуль 7
+- [ ] Перестроить классы под MVC
 
 # Диаграмма классов
 ## Упрощённая
@@ -273,8 +280,8 @@ classDiagram
 	Player --* PhysicsSystem
 	Player --o InterpolationSystem
 	Player ..> Tilemap
-	Player ..> Jump_params
-	Player ..> Dash_params
+	Player ..> JumpParams
+	Player ..> DashParams
 	Player ..|> Interpolatable
 	Tilemap --o BasicSprite
 	Collectable--|> BasicSprite
@@ -292,9 +299,9 @@ classDiagram
 	BasicSprite --* Transform
 	BasicSprite ..> Frame
 	Control --* Command
-	PhysicsSystem --* Jump_info
-	PhysicsSystem --* Dash_info
-	PhysicsSystem --* Player_diff
+	PhysicsSystem --* JumpInfo
+	PhysicsSystem --* DashInfo
+	PhysicsSystem --* PlayerDiff
 	PhysicsSystem ..> BasicSprite
 	PhysicsSystem ..> Tilemap
 	class Game {
@@ -339,10 +346,10 @@ classDiagram
 		+logic(fixed_steps: int) None
 		+add_ground_tile(sprite_path: str, tile_pos: Vector2) None
 		+add_hazard_tile(sprite_path: str, tile_pos: Vector2) None
-		+add_player(sprite_path: str, transform: Transform, jump: Jump_params, dash: Dash_params) None
+		+add_player(sprite_path: str, transform: Transform, jump: JumpParams, dash: DashParams) None
 		+add_finish(sprite_path: str, transform: Transform) None
-		+add_static_item(sprite_path: str, transform: Transform, diff: Player_diff) None
-		+add_moving_item(sprite_path: str, transform: Transform, diff: Player_diff, speed: float, destination: Vector2) None
+		+add_static_item(sprite_path: str, transform: Transform, diff: PlayerDiff) None
+		+add_moving_item(sprite_path: str, transform: Transform, diff: PlayerDiff, speed: float, destination: Vector2) None
 		-collect_items() None
 	}
 	class Player {
@@ -351,15 +358,15 @@ classDiagram
 		-INTERPOLATOR: InterpolationSystem
 		+dead: bool
 		+death_check() None
-		+apply_diff(diff: chacracter_diff) None
+		+apply_diff(diff: PlayerDiff) None
 	}
 	class Tilemap {
 		+SIZE: Vector2
 		-TILESIZE: Vector2
 		-SPRITES: pygame.sprite.Group
 		-LAYERS: list[list[BasicSprite]]
-		-convert_to_screen(pos: Vector2): Vector
-		-convert_to_tilemap(pos: Vector2): Vector
+		-convert_to_screen(pos: Vector2) Vector2
+		-convert_to_tilemap(pos: Vector2) Vector2
 		+add_layer(layer_name: str) None
 		+add_tile(sprite_path: str, layer_name: str, tile_pos: Vector2) None
 		+get_tile(layer_name: str, tile_pos: Vector2, pseudo_tile: bool) BasicSprite | None
@@ -371,7 +378,7 @@ classDiagram
 		#collect() None
 	}
 	class PowerUp {
-		+DIFF: Player_diff
+		+DIFF: PlayerDiff
 	}
 	class MovingPowerUp {
 		-SPEED: float
@@ -467,14 +474,14 @@ classDiagram
 		+size: Vector2
 		+pos: Vector2
 	}
-	class Jump_info {
+	class JumpInfo {
 		<<dataclass>>
 		+on_ground: bool
 		+force: int
 		+air_jumps: int
 		+def_air_jumps: int
 	}
-	class Dash_info {
+	class DashInfo {
 		<<dataclass>>
 		+is_active: bool
 		+speed: float
@@ -483,20 +490,20 @@ classDiagram
 		+count: int
 		+def_count: int
 	}
-	class Player_diff {
+	class PlayerDiff {
 		<<dataclass>>
 		+air_jumps: int
 		+def_air_jumps: int
 		+dashes: int
 		+def_dashes: int
 	}
-	class Jump_params {
+	class JumpParams {
 		<<dataclass>>
 		+dist: float
 		+height: float
 		+time: float
 	}
-	class Dash_params {
+	class DashParams {
 		<<dataclass>>
 		+dist: float
 		+time: float
@@ -504,12 +511,12 @@ classDiagram
 	class PhysicsSystem {
 		-VELOCITY: Vector2
 		-GRAVITY: float
-		-JUMP: Jump_info
-		-DASH: Dash_info
+		-JUMP: JumpInfo
+		-DASH: DashInfo
 		-SPEED: float
 		-dir: float
 		+on_ground: bool
-		+apply_diff(diff: Player_diff) None
+		+apply_diff(diff: PlayerDiff) None
 		+collide(obj: type[BasicSprite], ground: TilemapLayer) None
 		+apply_grav() None
 		+run(dir: float) None
